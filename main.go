@@ -5,6 +5,8 @@ import (
 	"go3d/actors"
 	"go3d/display"
 	"go3d/input"
+	"go3d/utils"
+	"math"
 	"os"
 	"os/signal"
 	"syscall"
@@ -72,13 +74,13 @@ func main() {
 
 		switch input.Key {
 		case "w":
-			view.MoveCam(0, 0, -view.CamMoveSpeed)
+			view.MoveCam(math.Cos(utils.DegToRad(90-view.CamRot[1]))*view.CamMoveSpeed, 0, math.Sin(utils.DegToRad(90-view.CamRot[1]))*-view.CamMoveSpeed)
 		case "s":
-			view.MoveCam(0, 0, view.CamMoveSpeed)
-		case "a":
-			view.MoveCam(-view.CamMoveSpeed, 0, 0)
+			view.MoveCam(math.Cos(utils.DegToRad(90-view.CamRot[1]))*-view.CamMoveSpeed, 0, math.Sin(utils.DegToRad(90-view.CamRot[1]))*view.CamMoveSpeed)
 		case "d":
-			view.MoveCam(view.CamMoveSpeed, 0, 0)
+			view.MoveCam(math.Cos(utils.DegToRad(-view.CamRot[1]))*view.CamMoveSpeed, 0, math.Sin(utils.DegToRad(-view.CamRot[1]))*-view.CamMoveSpeed)
+		case "a":
+			view.MoveCam(math.Cos(utils.DegToRad(-view.CamRot[1]))*-view.CamMoveSpeed, 0, math.Sin(utils.DegToRad(-view.CamRot[1]))*view.CamMoveSpeed)
 		case " ":
 			view.MoveCam(0, view.CamMoveSpeed, 0)
 		case "z":

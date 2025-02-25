@@ -171,6 +171,11 @@ func (v *View) PrepBuffer() {
 			// fmt.Printf("Camspace Vert: %v\n", camSpaceVert)
 			clipVert := utils.ApplyProjectionMatrix(camSpaceVert, v.XProjConst, v.YProjConst, v.ZProjConst, v.WProjConst)
 
+			// Discard if W out of bounds
+
+			if clipVert[3] > math.Abs(v.FarClip) || clipVert[3] < math.Abs(v.NearClip) {
+				continue
+			}
 			// fmt.Printf("Clip Vert: %v\n", clipVert)
 			ndcVert := utils.ApplyNdcMatrix(clipVert)
 			// Discard if out of bounds
