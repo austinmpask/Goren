@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"go3d/actors"
 	"go3d/display"
 	"os"
 	"os/signal"
@@ -23,13 +24,21 @@ func main() {
 
 	// Actual program
 	view := display.DefaultView()
+	p := actors.DefaultPoint()
+	view.RegisterActor(p)
+
+	p1 := &actors.Point{
+		X: 0,
+		Y: 0,
+		Z: -4,
+	}
+
+	view.RegisterActor(p1)
 
 	for {
 
 		view.StartFrame()
 		view.ClearBuffer()
-
-		//Do things
 
 		view.PrepBuffer()
 		view.DrawBuffer()
