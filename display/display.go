@@ -170,8 +170,21 @@ func (v *View) PrepBuffer() {
 
 			// fmt.Printf("Camspace Vert: %v\n", camSpaceVert)
 			clipVert := utils.ApplyProjectionMatrix(camSpaceVert, v.XProjConst, v.YProjConst, v.ZProjConst, v.WProjConst)
+
 			// fmt.Printf("Clip Vert: %v\n", clipVert)
 			ndcVert := utils.ApplyNdcMatrix(clipVert)
+			// Discard if out of bounds
+			ooB := false
+			for _, v := range ndcVert {
+				if v > 1 || v < -1 {
+					ooB = true
+					break
+				}
+
+			}
+			if ooB {
+				continue
+			}
 			// fmt.Printf("NDC Vert: %v\n", ndcVert)
 			ssVert := utils.NdcToScreen(ndcVert, v.Xpx, v.Ypx)
 			// fmt.Printf("Screenspace Vert: %v\n", ssVert)
