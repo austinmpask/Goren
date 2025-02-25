@@ -19,7 +19,7 @@ func InMs(d time.Duration) float64 {
 	return float64(d) / float64(time.Millisecond)
 }
 
-func InitFrameBuffer(x uint8, y uint8) [][]string {
+func InitFrameBuffer(x uint16, y uint16) [][]string {
 
 	buffer := make([][]string, y)
 	for i := range buffer {
@@ -49,7 +49,7 @@ func ApplyNdcMatrix(clipLoc []float64) []float64 {
 
 }
 
-func NdcToScreen(ndcLoc []float64, screenX uint8, screenY uint8) []float64 {
+func NdcToScreen(ndcLoc []float64, screenX uint16, screenY uint16) []float64 {
 	// Transform to screensize for final location
 	x := ((ndcLoc[0] + 1) / 2) * (float64(screenX) - 1)
 	y := (1 - ((ndcLoc[1] + 1) / 2)) * (float64(screenY) - 1)

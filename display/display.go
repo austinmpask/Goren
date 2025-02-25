@@ -17,8 +17,8 @@ var pixel = map[uint8]string{
 
 // View defines the screenspace printed to the terminal, with any debug information
 type View struct {
-	Xpx         uint8
-	Ypx         uint8
+	Xpx         uint16
+	Ypx         uint16
 	TargetFPS   uint8
 	FrameBuffer [][]string
 
@@ -50,13 +50,13 @@ type View struct {
 func DefaultView() *View {
 
 	v := View{
-		Xpx:          160,
-		Ypx:          70,
+		Xpx:          640,
+		Ypx:          240,
 		TargetFPS:    144,
 		Fov:          90,
 		CamX:         0,
 		CamY:         3,
-		CamZ:         0,
+		CamZ:         10,
 		NearClip:     -1,
 		FarClip:      -15,
 		CamMoveSpeed: 0.01,
@@ -137,7 +137,7 @@ func (v *View) PrepBuffer() {
 	for _, a := range v.Actors {
 
 		//Save raster verts for connecting with lines after vertex pass
-		var rasterVerts [][]uint8
+		var rasterVerts [][]uint16
 
 		// Calculate vertecies
 		for _, vert := range a.Verts() {
@@ -150,10 +150,10 @@ func (v *View) PrepBuffer() {
 			ssVert := utils.NdcToScreen(ndcVert, v.Xpx, v.Ypx)
 			// fmt.Printf("Screenspace Vert: %v\n", ssVert)
 
-			xVert := uint8(math.Round(ssVert[0]))
-			yVert := uint8(math.Round(ssVert[1]))
+			xVert := uint16(math.Round(ssVert[0]))
+			yVert := uint16(math.Round(ssVert[1]))
 
-			rasterVerts = append(rasterVerts, []uint8{xVert, yVert})
+			rasterVerts = append(rasterVerts, []uint16{xVert, yVert})
 
 			v.TouchBuffer(xVert, yVert)
 
@@ -216,7 +216,7 @@ func (v *View) PrepBuffer() {
 
 }
 
-func (v *View) DrawLine(start []uint8, end []uint8) {
+func (v *View) DrawLine(start []uint16, end []uint16) {
 
 	startX := start[0]
 	startY := start[1]
@@ -224,7 +224,7 @@ func (v *View) DrawLine(start []uint8, end []uint8) {
 	endX := end[0]
 	endY := end[1]
 	// Pixels that will be drawn to buffer
-	var pixels [][]uint8
+	var pixels [][]uint16
 
 	// Case of verical line
 	if startX == endX {
@@ -232,7 +232,7 @@ func (v *View) DrawLine(start []uint8, end []uint8) {
 		yMax := max(startY, endY)
 
 		for y := yMin; y < yMax; y++ {
-			pixels = append(pixels, []uint8{startX, y})
+			pixels = append(pixels, []uint16{startX, y})
 		}
 	} else if startY == endY {
 		// Case of flat line
@@ -240,7 +240,7 @@ func (v *View) DrawLine(start []uint8, end []uint8) {
 		xMax := max(startX, endX)
 
 		for x := xMin; x < xMax; x++ {
-			pixels = append(pixels, []uint8{x, startY})
+			pixels = append(pixels, []uint16{x, startY})
 		}
 	} else {
 
@@ -256,8 +256,8 @@ func (v *View) DrawLine(start []uint8, end []uint8) {
 			yMax := max(startY, endY)
 
 			for y := yMin; y < yMax; y++ {
-				x := uint8(math.Round(c*(float64(y)-float64(startY)) + float64(startX)))
-				pixels = append(pixels, []uint8{x, y})
+				x := uint16(math.Round(c*(float64(y)-float64(startY)) + float64(startX)))
+				pixels = append(pixels, []uint16{x, y})
 			}
 
 		} else {
@@ -266,8 +266,8 @@ func (v *View) DrawLine(start []uint8, end []uint8) {
 			xMax := max(startX, endX)
 
 			for x := xMin; x < xMax; x++ {
-				y := uint8(math.Round(m*(float64(x)-float64(startX)) + float64(startY)))
-				pixels = append(pixels, []uint8{x, y})
+				y := uint16(math.Round(m*(float64(x)-float64(startX)) + float64(startY)))
+				pixels = append(pixels, []uint16{x, y})
 			}
 
 		}
@@ -319,7 +319,7 @@ func (v *View) DrawDebug() {
 }
 
 // Safely populate a pixel in the buffer respecting xy bounds
-func (v *View) TouchBuffer(x uint8, y uint8) {
+func (v *View) TouchBuffer(x uint16, y uint16) {
 	if x < v.Xpx && y < v.Ypx {
 
 		v.FrameBuffer[y][x] = pixel[1]
