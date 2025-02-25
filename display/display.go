@@ -50,8 +50,8 @@ type View struct {
 func DefaultView() *View {
 
 	v := View{
-		Xpx:          80,
-		Ypx:          40,
+		Xpx:          160,
+		Ypx:          70,
 		TargetFPS:    144,
 		Fov:          90,
 		CamX:         0,
@@ -134,10 +134,12 @@ func (v *View) CalcProjectionConstants() {
 // Translate worldspace and cameraspace data into screenspace pixels
 func (v *View) PrepBuffer() {
 
-	// fmt.Printf("X Matrix Const: %v\n", v.XProjConst)
-	// fmt.Printf("Y Matrix Const: %v\n", v.YProjConst)
-	// fmt.Printf("Z Matrix Const: %v\n", v.ZProjConst)
 	for _, a := range v.Actors {
+
+		//Save raster verts for connecting with lines after vertex pass
+		var rasterVerts [][]uint8
+
+		// Calculate vertecies
 		for _, vert := range a.Verts() {
 			camSpaceVert := utils.ApplyCamMatrix(v.CamX, v.CamY, v.CamZ, vert[0], vert[1], vert[2])
 			// fmt.Printf("Camspace Vert: %v\n", camSpaceVert)
@@ -148,8 +150,132 @@ func (v *View) PrepBuffer() {
 			ssVert := utils.NdcToScreen(ndcVert, v.Xpx, v.Ypx)
 			// fmt.Printf("Screenspace Vert: %v\n", ssVert)
 
-			v.TouchBuffer(uint8(math.Round(ssVert[0])), uint8(math.Round(ssVert[1])))
+			xVert := uint8(math.Round(ssVert[0]))
+			yVert := uint8(math.Round(ssVert[1]))
+
+			rasterVerts = append(rasterVerts, []uint8{xVert, yVert})
+
+			v.TouchBuffer(xVert, yVert)
+
 		}
+
+		// Draw lines between verts with bresenhams alg
+
+		if len(rasterVerts) > 1 {
+
+			// Keep track of connected points
+
+			connected := make(map[int]map[int]bool)
+
+			// Iterate through each vertex, connecting with neighbors and skipping if the reverse has been done
+			for i := range len(rasterVerts) {
+
+				for j := range len(rasterVerts) {
+
+					if i != j {
+
+						// Is i in connected
+						if c1, ok := connected[i]; ok {
+
+							// Is j in connected[i]
+							if _, ok := c1[j]; !ok {
+								// DRAWLINE
+								// fmt.Printf("Draw btwn %v, %v\n", i, j)
+								v.DrawLine(rasterVerts[i], rasterVerts[j])
+
+								// Record
+								// If j in connected
+								if _, ok := connected[j]; !ok {
+									connected[j] = make(map[int]bool)
+
+								}
+								connected[j][i] = true
+							}
+
+						} else {
+							// DRAWLINE
+
+							// fmt.Printf("Draw btwn %v, %v\n", i, j)
+							v.DrawLine(rasterVerts[i], rasterVerts[j])
+							// Record
+							// If j in connected
+							if _, ok := connected[j]; !ok {
+								connected[j] = make(map[int]bool)
+
+							}
+							connected[j][i] = true
+						}
+					}
+
+				}
+
+			}
+		}
+
+	}
+
+}
+
+func (v *View) DrawLine(start []uint8, end []uint8) {
+
+	startX := start[0]
+	startY := start[1]
+
+	endX := end[0]
+	endY := end[1]
+	// Pixels that will be drawn to buffer
+	var pixels [][]uint8
+
+	// Case of verical line
+	if startX == endX {
+		yMin := min(startY, endY)
+		yMax := max(startY, endY)
+
+		for y := yMin; y < yMax; y++ {
+			pixels = append(pixels, []uint8{startX, y})
+		}
+	} else if startY == endY {
+		// Case of flat line
+		xMin := min(startX, endX)
+		xMax := max(startX, endX)
+
+		for x := xMin; x < xMax; x++ {
+			pixels = append(pixels, []uint8{x, startY})
+		}
+	} else {
+
+		// Bresenhams alg for other slopes
+
+		m := (float64(endY) - float64(startY)) / (float64(endX) - float64(startX))
+
+		// Iterate Y for slope 1 or higher
+		if math.Abs(m) >= 1 {
+			c := 1 / m
+
+			yMin := min(startY, endY)
+			yMax := max(startY, endY)
+
+			for y := yMin; y < yMax; y++ {
+				x := uint8(math.Round(c*(float64(y)-float64(startY)) + float64(startX)))
+				pixels = append(pixels, []uint8{x, y})
+			}
+
+		} else {
+			// Iterate over X for slope < 1
+			xMin := min(startX, endX)
+			xMax := max(startX, endX)
+
+			for x := xMin; x < xMax; x++ {
+				y := uint8(math.Round(m*(float64(x)-float64(startX)) + float64(startY)))
+				pixels = append(pixels, []uint8{x, y})
+			}
+
+		}
+
+	}
+	// Draw all the pixels
+	for _, p := range pixels {
+		v.TouchBuffer(p[0], p[1])
 	}
 
 }

@@ -24,21 +24,15 @@ func main() {
 
 	// Actual program
 	view := display.DefaultView()
-	p := actors.DefaultPoint()
-	view.RegisterActor(p)
 
-	p1 := &actors.Point{
-		X: 0,
-		Y: 0,
-		Z: -4,
-	}
-
-	view.RegisterActor(p1)
+	t := actors.CreateTriangle([]float64{0, 0, -5}, []float64{5, 0, -10}, []float64{0, 5, -5})
+	view.RegisterActor(t)
 
 	for {
 
 		view.StartFrame()
 		view.ClearBuffer()
+		view.MoveCam(view.CamMoveSpeed, 0, -view.CamMoveSpeed)
 
 		view.PrepBuffer()
 		view.DrawBuffer()
