@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go3d/actors"
 	"go3d/display"
+	"go3d/input"
 	"os"
 	"os/signal"
 	"syscall"
@@ -57,11 +58,28 @@ func main() {
 
 	}
 
+	go input.ListenKeys()
+	go input.ManageKeys()
+
 	for {
 
 		view.StartFrame()
 		view.ClearBuffer()
-		view.MoveCam(view.CamMoveSpeed, 0, -view.CamMoveSpeed)
+
+		switch input.Key {
+		case "w":
+			view.MoveCam(0, 0, -view.CamMoveSpeed)
+		case "s":
+			view.MoveCam(0, 0, view.CamMoveSpeed)
+		case "a":
+			view.MoveCam(-view.CamMoveSpeed, 0, 0)
+		case "d":
+			view.MoveCam(view.CamMoveSpeed, 0, 0)
+		case " ":
+			view.MoveCam(0, view.CamMoveSpeed, 0)
+		case "z":
+			view.MoveCam(0, -view.CamMoveSpeed, 0)
+		}
 
 		view.PrepBuffer()
 		view.DrawBuffer()

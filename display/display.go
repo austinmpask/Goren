@@ -50,8 +50,10 @@ type View struct {
 func DefaultView() *View {
 
 	v := View{
-		Xpx:          640,
-		Ypx:          240,
+		Xpx: 640,
+		Ypx: 240,
+		// Xpx:          80,
+		// Ypx:          40,
 		TargetFPS:    144,
 		Fov:          90,
 		CamX:         0,
@@ -316,6 +318,7 @@ func (v *View) DrawDebug() {
 	fmt.Printf("Frametime util: %v %% \n", util)
 	fmt.Printf("Potential FPS: %v\n", pfps)
 	fmt.Printf("Real FPS: %v\n", fps)
+	// fmt.Printf("Keys Pressed: [%v]\n", input.Key)
 }
 
 // Safely populate a pixel in the buffer respecting xy bounds
