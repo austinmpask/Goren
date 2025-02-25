@@ -41,9 +41,10 @@ type View struct {
 	ZProjConst float64
 	WProjConst float64
 
-	CamX float64
-	CamY float64
-	CamZ float64
+	CamX   float64
+	CamY   float64
+	CamZ   float64
+	CamRot []float64
 
 	CamMoveSpeed float64
 
@@ -64,11 +65,12 @@ func DefaultView() *View {
 		Ypx: 240,
 		// Xpx:          80,
 		// Ypx:          40,
-		TargetFPS:    60,
+		TargetFPS:    100,
 		Fov:          90,
 		CamX:         0,
 		CamY:         3,
 		CamZ:         10,
+		CamRot:       []float64{0, 0, 0},
 		NearClip:     -1,
 		FarClip:      -15,
 		CamMoveSpeed: 0.05,
@@ -94,6 +96,7 @@ func DefaultView() *View {
 	return &v
 }
 
+// Add actors to the scene
 func (v *View) RegisterActor(a actors.Actor) {
 	v.Actors = append(v.Actors, a)
 }
@@ -121,12 +124,21 @@ func (v *View) ClearBuffer() {
 
 }
 
+// Apply a 3d translation to camera
 func (v *View) MoveCam(dx float64, dy float64, dz float64) {
 	v.CamX += dx
 	v.CamY += dy
 	v.CamZ += dz
 }
 
+// Apply a new rotation value to camera. Rotation transformations occur during rendering
+func (v *View) RotateCam(rx float64, ry float64, rz float64) {
+	v.CamRot[0] += rx
+	v.CamRot[1] += ry
+	v.CamRot[2] += rz
+}
+
+// Precompute projection matrix constants for camera aspects which do not change
 func (v *View) CalcProjectionConstants() {
 	// Projection matrix [0,0]: 1/(Aspect Ratio * Tan(FOV/2))
 	tanHalfFov := math.Tan((math.Pi * float64(v.Fov) / 360))
@@ -143,7 +155,8 @@ func (v *View) CalcProjectionConstants() {
 
 }
 
-// Translate worldspace and cameraspace data into screenspace pixels
+// Apply camera transformations -> projection transformations -> NDC transformations -> screenspace transformations
+// Add results to the framebuffer (verts & lines)
 func (v *View) PrepBuffer() {
 
 	for _, a := range v.Actors {
@@ -153,7 +166,7 @@ func (v *View) PrepBuffer() {
 
 		// Calculate vertecies
 		for _, vert := range a.Verts() {
-			camSpaceVert := utils.ApplyCamMatrix(v.CamX, v.CamY, v.CamZ, vert[0], vert[1], vert[2])
+			camSpaceVert := utils.ApplyCamMatrix(v.CamX, v.CamY, v.CamZ, v.CamRot, vert[0], vert[1], vert[2])
 
 			// fmt.Printf("Camspace Vert: %v\n", camSpaceVert)
 			clipVert := utils.ApplyProjectionMatrix(camSpaceVert, v.XProjConst, v.YProjConst, v.ZProjConst, v.WProjConst)
@@ -166,49 +179,37 @@ func (v *View) PrepBuffer() {
 			xVert := uint16(math.Round(ssVert[0]))
 			yVert := uint16(math.Round(ssVert[1]))
 
+			// Save final 2D vertex for drawing lines
 			rasterVerts = append(rasterVerts, []uint16{xVert, yVert})
 
+			// Load vertecies to buffer
 			v.TouchBuffer(Blue, xVert, yVert)
 
 		}
 
-		// Draw lines between verts with bresenhams alg
-
+		// Draw lines between 2D verts with bresenhams alg
 		if len(rasterVerts) > 1 {
 
 			// Keep track of connected points
-
 			connected := make(map[int]map[int]bool)
 
 			// Iterate through each vertex, connecting with neighbors and skipping if the reverse has been done
 			for i := range len(rasterVerts) {
-
 				for j := range len(rasterVerts) {
-
 					if i != j {
-
 						// Is i in connected
 						if c1, ok := connected[i]; ok {
-
 							// Is j in connected[i]
 							if _, ok := c1[j]; !ok {
-								// DRAWLINE
-								// fmt.Printf("Draw btwn %v, %v\n", i, j)
 								v.DrawLine(rasterVerts[i], rasterVerts[j])
-
 								// Record
 								// If j in connected
 								if _, ok := connected[j]; !ok {
 									connected[j] = make(map[int]bool)
-
 								}
 								connected[j][i] = true
 							}
-
 						} else {
-							// DRAWLINE
-
-							// fmt.Printf("Draw btwn %v, %v\n", i, j)
 							v.DrawLine(rasterVerts[i], rasterVerts[j])
 							// Record
 							// If j in connected
@@ -229,6 +230,7 @@ func (v *View) PrepBuffer() {
 
 }
 
+// Adds contiguous line to framebuffer between 2 points w/ Bresenhams alg
 func (v *View) DrawLine(start []uint16, end []uint16) {
 
 	startX := start[0]
@@ -236,7 +238,8 @@ func (v *View) DrawLine(start []uint16, end []uint16) {
 
 	endX := end[0]
 	endY := end[1]
-	// Pixels that will be drawn to buffer
+
+	// Pixels that will be drawn to buffer after calculations
 	var pixels [][]uint16
 
 	// Case of verical line
@@ -244,6 +247,7 @@ func (v *View) DrawLine(start []uint16, end []uint16) {
 		yMin := min(startY, endY) + 1
 		yMax := max(startY, endY)
 
+		// Save pixels to draw along vertical line
 		for y := yMin; y < yMax; y++ {
 			pixels = append(pixels, []uint16{startX, y})
 		}
@@ -252,6 +256,7 @@ func (v *View) DrawLine(start []uint16, end []uint16) {
 		xMin := min(startX, endX) + 1
 		xMax := max(startX, endX)
 
+		// Save pixels to draw along horizontal line
 		for x := xMin; x < xMax; x++ {
 			pixels = append(pixels, []uint16{x, startY})
 		}
@@ -259,12 +264,16 @@ func (v *View) DrawLine(start []uint16, end []uint16) {
 
 		// Bresenhams alg for other slopes
 
+		// Calculate slope
 		m := (float64(endY) - float64(startY)) / (float64(endX) - float64(startX))
 
-		// Iterate Y for slope 1 or higher
+		// Iterate Y for slope 1 or higher as each Y coordinate will have only one pixel
 		if math.Abs(m) >= 1 {
+
+			// Invert slope
 			c := 1 / m
 
+			// Skip first pixel as vertex will be drawn there
 			yMin := min(startY, endY) + 1
 			yMax := max(startY, endY)
 
@@ -274,7 +283,9 @@ func (v *View) DrawLine(start []uint16, end []uint16) {
 			}
 
 		} else {
-			// Iterate over X for slope < 1
+			// Iterate over X for slope < 1 as each X coordinate will have only one pixel
+
+			// Skip first pixel for vertex
 			xMin := min(startX, endX) + 1
 			xMax := max(startX, endX)
 
@@ -286,7 +297,7 @@ func (v *View) DrawLine(start []uint16, end []uint16) {
 		}
 
 	}
-	// Draw all the pixels
+	// Load all the pixels to framebuffer from whichever line alg was used
 	for _, p := range pixels {
 		v.TouchBuffer(Cyan, p[0], p[1])
 	}
@@ -304,7 +315,9 @@ func (v *View) DrawBuffer() {
 
 }
 
+// Prints performance information below view window
 func (v *View) DrawDebug() {
+
 	ftMs := utils.InMs(v.FrameTime)
 	maxFtMs := utils.InMs(v.MaxFrameTime)
 	frEndMs := utils.InMs((v.FrameEnd))
@@ -313,6 +326,7 @@ func (v *View) DrawDebug() {
 	var pfps float64
 	var fps float64
 
+	// Only calculate these values if denominator != 0
 	if maxFtMs != 0 {
 		util = 100 * ftMs / maxFtMs
 	}
@@ -329,7 +343,6 @@ func (v *View) DrawDebug() {
 	fmt.Printf("Frametime util: %v %% \n", util)
 	fmt.Printf("Potential FPS: %v\n", pfps)
 	fmt.Printf("Real FPS: %v\n", fps)
-	// fmt.Printf("Keys Pressed: [%v]\n", input.Key)
 }
 
 // Safely populate a pixel in the buffer respecting xy bounds
@@ -342,25 +355,29 @@ func (v *View) TouchBuffer(color string, x uint16, y uint16) {
 
 }
 
+// Log the time the frame calculations began
 func (v *View) StartFrame() {
 	v.FrameStart = time.Now()
 
 }
 
+// Log the time once the buffer and anything else was drawn to screen
 func (v *View) EndFrame() {
 
 	v.FrameTime = time.Since(v.FrameStart)
 }
 
+// Minimize screen tearing by waiting until frametime for the target framerate has elapsed before continuing
 func (v *View) FrameSync() {
 	frameTimeSlack := v.MaxFrameTime - v.FrameTime
 
 	targetTime := time.Now().Add(frameTimeSlack)
 
-	// Use for loop instead, more accurate scheduling than sleep
+	// Use for loop instead, more accurate scheduling than sleep. Sleep introduces significant drift at high refresh rates
 	for time.Now().Before(targetTime) {
 		//Wait
 	}
 
+	// Log the time that the entire frame ended
 	v.FrameEnd = time.Since(v.FrameStart)
 }

@@ -1,24 +1,30 @@
 package utils
 
 import (
+	"math"
 	"os"
 	"os/exec"
-	"sync"
 	"time"
 )
 
-var Wg = sync.WaitGroup{}
-
+// Clear terminal window TODO: make cross platform
 func ClearScreen() {
 	cmd := exec.Command("clear")
 	cmd.Stdout = os.Stdout
 	cmd.Run()
 }
 
+// Convert a duration to millisecond value
 func InMs(d time.Duration) float64 {
 	return float64(d) / float64(time.Millisecond)
 }
 
+// Convert degrees to radians
+func DegToRad(deg float64) float64 {
+	return (deg * math.Pi) / 180
+}
+
+// Initialize nested slices to emtpy strings
 func InitFrameBuffer(x uint16, y uint16) [][]string {
 
 	buffer := make([][]string, y)
@@ -29,10 +35,79 @@ func InitFrameBuffer(x uint16, y uint16) [][]string {
 
 }
 
-func ApplyCamMatrix(camX float64, camY float64, camZ float64, x float64, y float64, z float64) []float64 {
-	return []float64{x - camX, y - camY, z - camZ}
+// Apply x rotation matrix
+func RotateXTransform(vec []float64, rot []float64) []float64 {
+	x := vec[0]
+	y := vec[1]
+	z := vec[2]
+
+	xRot := DegToRad(rot[0])
+
+	// Apply matrix
+	xTrans := x
+	yTrans := math.Cos(xRot)*y - math.Sin(xRot)*z
+	zTrans := math.Sin(xRot)*y + math.Cos(xRot)*z
+
+	return []float64{xTrans, yTrans, zTrans}
+
 }
 
+// Apply y rotation matrix
+func RotateYTransform(vec []float64, rot []float64) []float64 {
+	x := vec[0]
+	y := vec[1]
+	z := vec[2]
+
+	yRot := DegToRad(rot[1])
+
+	// Apply matrix
+	xTrans := math.Cos(yRot)*x + math.Sin(yRot)*z
+	yTrans := y
+	zTrans := -math.Sin(yRot)*x + math.Cos(yRot)*z
+
+	return []float64{xTrans, yTrans, zTrans}
+
+}
+
+// Apply z rotation matrix
+func RotateZTransform(vec []float64, rot []float64) []float64 {
+	x := vec[0]
+	y := vec[1]
+	z := vec[2]
+
+	zRot := DegToRad(rot[2])
+
+	// Apply matrix
+	xTrans := math.Cos(zRot)*x - math.Sin(zRot)*y
+	yTrans := math.Sin(zRot)*x + math.Cos(zRot)*y
+	zTrans := z
+
+	return []float64{xTrans, yTrans, zTrans}
+
+}
+
+// Rotate a 3D vector by Z -> Y -> X
+func RotateVecXYZ(vec []float64, rot []float64) []float64 {
+
+	z := RotateZTransform(vec, rot)
+	y := RotateYTransform(z, rot)
+	x := RotateXTransform(y, rot)
+	return x
+}
+
+// Apply camera translation and rotation to a vector
+func ApplyCamMatrix(camX float64, camY float64, camZ float64, camRot []float64, x float64, y float64, z float64) []float64 {
+	// Translate
+	translatedVec := []float64{x - camX, y - camY, z - camZ}
+
+	// Rotate
+	r := RotateVecXYZ(translatedVec, camRot)
+
+	return r
+
+}
+
+// Project vector from camspace to clip space
 func ApplyProjectionMatrix(vert []float64, xConst float64, yConst float64, zConst float64, wConst float64) []float64 {
 	// Assumed w = 1
 	newX := vert[0] * xConst
@@ -43,12 +118,14 @@ func ApplyProjectionMatrix(vert []float64, xConst float64, yConst float64, zCons
 	return []float64{newX, newY, newZ, newW}
 }
 
+// Transform vec from clip space to norm. device coordinates
 func ApplyNdcMatrix(clipLoc []float64) []float64 {
 	// Divide points by w', discard y', w'
 	return []float64{clipLoc[0] / clipLoc[3], clipLoc[1] / clipLoc[3]}
 
 }
 
+// Transform NDC to screenspace coordinates
 func NdcToScreen(ndcLoc []float64, screenX uint16, screenY uint16) []float64 {
 	// Transform to screensize for final location
 	x := ((ndcLoc[0] + 1) / 2) * (float64(screenX) - 1)

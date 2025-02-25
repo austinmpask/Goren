@@ -10,9 +10,12 @@ import (
 var oldState, newState syscall.Termios
 var fd = syscall.Stdin
 
+// Globals for current key pressed on keyboard
 var Key string
 var KeyTimeStamp time.Time
 
+// Save the current key pressed to a global variable
+// TODO: Allow for simultaneous keypresses
 func ListenKeys() {
 	syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), uintptr(syscall.TCGETS), uintptr(unsafe.Pointer(&oldState)))
 
@@ -24,6 +27,8 @@ func ListenKeys() {
 	var b [1]byte
 	for {
 		os.Stdin.Read(b[:])
+
+		// Save one key, and save timestamp for expiry
 		Key = string(b[0])
 		KeyTimeStamp = time.Now()
 
@@ -34,7 +39,8 @@ func ListenKeys() {
 	}
 }
 
-// Bridge the gap of when a key is held, essentially maintain a given key for 500ms then clear
+// Maintain natural inputs with the terminal input deadzone limitation
+// TODO: Make this better
 func ManageKeys() {
 	for {
 		elapsed := time.Since(KeyTimeStamp)

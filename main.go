@@ -16,20 +16,25 @@ func main() {
 	osSig := make(chan os.Signal, 1)
 	signal.Notify(osSig, syscall.SIGINT, syscall.SIGTERM)
 
+	// Run cleanup functions
 	go func() {
 		<-osSig
 		fmt.Println("Quitting")
-		fmt.Print("\033[?25h")
+		// Exit raw mode
+		input.RestoreTerminal()
+		// Put cursor back
+		fmt.Println("\033[?25h")
 		os.Exit(0)
 	}()
+
+	// Listen to keys and manage key expiry to simulate "key depress"
+	go input.ListenKeys()
+	go input.ManageKeys()
 
 	// Actual program
 	view := display.DefaultView()
 
-	// t := actors.CreateTriangle([]float64{0, 0, -5}, []float64{5, 0, -10}, []float64{0, 5, -5})
-
 	triangles := []actors.Actor{
-		// Trunk (simplified cylinder approximation)
 		actors.CreateTriangle([]float64{-0.5, 0, 0}, []float64{0.5, 0, 0}, []float64{0.5, 5, 0}),
 		actors.CreateTriangle([]float64{-0.5, 0, 0}, []float64{0.5, 5, 0}, []float64{-0.5, 5, 0}),
 		actors.CreateTriangle([]float64{-0.5, 0, -0.5}, []float64{0.5, 0, -0.5}, []float64{0.5, 5, -0.5}),
@@ -50,7 +55,6 @@ func main() {
 		actors.CreateTriangle([]float64{0, 4, 0}, []float64{-1, 5, 1}, []float64{-1, 5, -1}),
 		actors.CreateTriangle([]float64{0, 4, 0}, []float64{-1, 5, -1}, []float64{1, 5, -1}),
 		actors.CreateTriangle([]float64{0, 4, 0}, []float64{1, 5, -1}, []float64{1, 5, 1}),
-		// ... Add more branches and leaves (using similar triangle patterns)
 	}
 
 	for _, t := range triangles {
@@ -58,13 +62,13 @@ func main() {
 
 	}
 
-	go input.ListenKeys()
-	go input.ManageKeys()
-
+	// Main loop
 	for {
 
 		view.StartFrame()
 		view.ClearBuffer()
+
+		// Scene logic
 
 		switch input.Key {
 		case "w":
@@ -79,6 +83,14 @@ func main() {
 			view.MoveCam(0, view.CamMoveSpeed, 0)
 		case "z":
 			view.MoveCam(0, -view.CamMoveSpeed, 0)
+		case "i":
+			view.RotateCam(-4*view.CamMoveSpeed, 0, 0)
+		case "k":
+			view.RotateCam(4*view.CamMoveSpeed, 0, 0)
+		case "l":
+			view.RotateCam(0, 8*view.CamMoveSpeed, 0)
+		case "j":
+			view.RotateCam(0, -8*view.CamMoveSpeed, 0)
 		}
 
 		view.PrepBuffer()

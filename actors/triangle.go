@@ -6,6 +6,7 @@ type Triangle struct {
 	C []float64
 }
 
+// Basic triangle for rendering which inherits the Actor interface
 func CreateTriangle(a []float64, b []float64, c []float64) Actor {
 	t := Triangle{
 		A: a,
