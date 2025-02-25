@@ -9,6 +9,16 @@ import (
 	"time"
 )
 
+var Reset = "\033[0m"
+var Red = "\033[31m"
+var Green = "\033[32m"
+var Yellow = "\033[33m"
+var Blue = "\033[34m"
+var Magenta = "\033[35m"
+var Cyan = "\033[36m"
+var Gray = "\033[37m"
+var White = "\033[97m"
+
 // Monochrome colorspace
 var pixel = map[uint8]string{
 	0: "  ",
@@ -54,14 +64,14 @@ func DefaultView() *View {
 		Ypx: 240,
 		// Xpx:          80,
 		// Ypx:          40,
-		TargetFPS:    144,
+		TargetFPS:    60,
 		Fov:          90,
 		CamX:         0,
 		CamY:         3,
 		CamZ:         10,
 		NearClip:     -1,
 		FarClip:      -15,
-		CamMoveSpeed: 0.01,
+		CamMoveSpeed: 0.05,
 	}
 
 	// Calc max frame time
@@ -144,6 +154,7 @@ func (v *View) PrepBuffer() {
 		// Calculate vertecies
 		for _, vert := range a.Verts() {
 			camSpaceVert := utils.ApplyCamMatrix(v.CamX, v.CamY, v.CamZ, vert[0], vert[1], vert[2])
+
 			// fmt.Printf("Camspace Vert: %v\n", camSpaceVert)
 			clipVert := utils.ApplyProjectionMatrix(camSpaceVert, v.XProjConst, v.YProjConst, v.ZProjConst, v.WProjConst)
 			// fmt.Printf("Clip Vert: %v\n", clipVert)
@@ -157,7 +168,7 @@ func (v *View) PrepBuffer() {
 
 			rasterVerts = append(rasterVerts, []uint16{xVert, yVert})
 
-			v.TouchBuffer(xVert, yVert)
+			v.TouchBuffer(Blue, xVert, yVert)
 
 		}
 
@@ -230,7 +241,7 @@ func (v *View) DrawLine(start []uint16, end []uint16) {
 
 	// Case of verical line
 	if startX == endX {
-		yMin := min(startY, endY)
+		yMin := min(startY, endY) + 1
 		yMax := max(startY, endY)
 
 		for y := yMin; y < yMax; y++ {
@@ -238,7 +249,7 @@ func (v *View) DrawLine(start []uint16, end []uint16) {
 		}
 	} else if startY == endY {
 		// Case of flat line
-		xMin := min(startX, endX)
+		xMin := min(startX, endX) + 1
 		xMax := max(startX, endX)
 
 		for x := xMin; x < xMax; x++ {
@@ -254,7 +265,7 @@ func (v *View) DrawLine(start []uint16, end []uint16) {
 		if math.Abs(m) >= 1 {
 			c := 1 / m
 
-			yMin := min(startY, endY)
+			yMin := min(startY, endY) + 1
 			yMax := max(startY, endY)
 
 			for y := yMin; y < yMax; y++ {
@@ -264,7 +275,7 @@ func (v *View) DrawLine(start []uint16, end []uint16) {
 
 		} else {
 			// Iterate over X for slope < 1
-			xMin := min(startX, endX)
+			xMin := min(startX, endX) + 1
 			xMax := max(startX, endX)
 
 			for x := xMin; x < xMax; x++ {
@@ -277,7 +288,7 @@ func (v *View) DrawLine(start []uint16, end []uint16) {
 	}
 	// Draw all the pixels
 	for _, p := range pixels {
-		v.TouchBuffer(p[0], p[1])
+		v.TouchBuffer(Cyan, p[0], p[1])
 	}
 
 }
@@ -322,10 +333,11 @@ func (v *View) DrawDebug() {
 }
 
 // Safely populate a pixel in the buffer respecting xy bounds
-func (v *View) TouchBuffer(x uint16, y uint16) {
+func (v *View) TouchBuffer(color string, x uint16, y uint16) {
+
 	if x < v.Xpx && y < v.Ypx {
 
-		v.FrameBuffer[y][x] = pixel[1]
+		v.FrameBuffer[y][x] = fmt.Sprintf("%s%s\033[0m", color, pixel[1])
 	}
 
 }
