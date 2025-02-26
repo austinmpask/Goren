@@ -34,10 +34,10 @@ func main() {
 	go input.ManageKeys()
 
 	// Actual program
-	view := display.CreateView(256, 224, 30, .1)
+	view := display.CreateView(256, 224, 60, .1, true)
 
-	panda := actors.CreateObject(utils.ParseObj("./rat.obj"), 0, 3, 10, .2, "green")
-	miniRat := actors.CreateObject(utils.ParseObj("./rat.obj"), -5, 3, 20, .1, "red")
+	panda := actors.CreateObject(utils.ParseObj("./rat.obj"), 0, 3, 8, .2, "Green")
+	miniRat := actors.CreateObject(utils.ParseObj("./rat.obj"), -5, 3, 23, .1, "Red")
 	view.RegisterObject(*panda)
 	view.RegisterObject(*miniRat)
 
@@ -77,7 +77,7 @@ func main() {
 
 		view.PrepBuffer()
 		view.DrawBuffer()
-		view.DrawDebug()
+		// view.DrawDebug()
 		view.EndFrame()
 		view.FrameSync()
 

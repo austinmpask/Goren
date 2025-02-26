@@ -10,18 +10,6 @@ import (
 	"time"
 )
 
-var ColorMap = map[string]string{
-	"reset":   "\033[0m",
-	"red":     "\033[31m",
-	"green":   "\033[32m",
-	"yellow":  "\033[33m",
-	"blue":    "\033[34m",
-	"magenta": "\033[35m",
-	"cyan":    "\033[36m",
-	"gray":    "\033[37m",
-	"white":   "\033[97m",
-}
-
 // Monochrome colorspace
 var pixel = map[uint8]string{
 	0: "  ",
@@ -50,10 +38,11 @@ type View struct {
 	CamZ   float64
 	CamRot []float64
 
-	DrawVerts  bool
-	DrawWire   bool
-	RenderWire bool
-	RenderFace bool
+	DrawVerts     bool
+	DrawWire      bool
+	RenderWire    bool
+	RenderFace    bool
+	OverlayOrigin []uint16
 
 	CamMoveSpeed float64
 
@@ -62,12 +51,13 @@ type View struct {
 	FrameEnd   time.Duration
 
 	MaxFrameTime time.Duration
+	Debug        bool
 
 	Xborder   string
 	Triangles []actors.Triangle
 }
 
-func CreateView(w uint16, h uint16, fps uint8, moveSpeed float64) *View {
+func CreateView(w uint16, h uint16, fps uint8, moveSpeed float64, debug bool) *View {
 
 	v := View{
 		Xpx:          w,
@@ -79,18 +69,21 @@ func CreateView(w uint16, h uint16, fps uint8, moveSpeed float64) *View {
 		CamZ:         10,
 		CamRot:       []float64{0, 0, 0},
 		NearClip:     -1,
-		FarClip:      -150,
+		FarClip:      -50,
 		CamMoveSpeed: moveSpeed,
 
 		DrawVerts:  false,
 		DrawWire:   false,
 		RenderWire: true,
 		RenderFace: true,
+		Debug:      debug,
 	}
 
 	// Calc max frame time
 	v.MaxFrameTime = v.CalcMaxFrameTime()
 
+	// Origin for drawing big text
+	v.OverlayOrigin = []uint16{5, 5}
 	// Initialize buffers
 	v.FrameBuffer = utils.InitFrameBuffer(v.Xpx, v.Ypx)
 	v.DepthBuffer = utils.InitDepthBuffer(v.Xpx, v.Ypx)
@@ -238,7 +231,7 @@ func (v *View) PrepBuffer() {
 
 			// Load vertecies to buffer
 			if v.DrawVerts {
-				v.TouchBuffer(ColorMap["red"], xVert, yVert)
+				v.TouchBuffer(utils.ColorMap["Red5"], xVert, yVert)
 			}
 
 		}
@@ -347,7 +340,12 @@ func (v *View) PrepBuffer() {
 
 						// Only draw if the pixel is infront of other faces, based on average face depth
 						if v.DepthBuffer[y][x] > depth {
-							v.TouchBuffer(ColorMap[parent.Color], x, y)
+
+							// Objects should get darker as they are further from the camera
+							gamma := max(10-int(math.Round(10*depth/(.7*(math.Abs(v.FarClip)-math.Abs(v.NearClip))))), 1)
+
+							colorGamma := fmt.Sprintf("%s%v", parent.Color, gamma)
+							v.TouchBuffer(utils.ColorMap[colorGamma], x, y)
 							v.DepthBuffer[y][x] = depth
 						}
 					}
@@ -357,6 +355,11 @@ func (v *View) PrepBuffer() {
 
 		}
 
+	}
+
+	// Draw debug stats on the screen in big text
+	if v.Debug {
+		v.DrawDebug()
 	}
 
 }
@@ -437,7 +440,7 @@ func (v *View) DrawLine(start []uint16, end []uint16) [][]uint16 {
 	if v.DrawWire {
 
 		for _, p := range pixels {
-			v.TouchBuffer(ColorMap["cyan"], p[0], p[1])
+			v.TouchBuffer(utils.ColorMap["Cyan5"], p[0], p[1])
 		}
 	}
 
@@ -480,11 +483,57 @@ func (v *View) DrawDebug() {
 		fps = 1000 / frEndMs
 	}
 
-	fmt.Printf("Frametime: %v ms\n", ftMs)
-	fmt.Printf("Frametime util: %v %% \n", util)
-	fmt.Printf("Potential FPS: %v\n", pfps)
-	fmt.Printf("Real FPS: %v\n", fps)
+	// Print directly to buffer
+	v.DrawBigDebug(0, fmt.Sprintf("FRAMETIME: %.3f", ftMs))
+	v.DrawBigDebug(1, fmt.Sprintf("FRAMETIME UTIL: %.3f%%", util))
+	v.DrawBigDebug(2, fmt.Sprintf("POTENTIAL FPS: %.3f", pfps))
+	v.DrawBigDebug(3, fmt.Sprintf("REAL FPS: %.3f", fps))
+	v.DrawBigDebug(4, fmt.Sprintf("POLYCOUNT: %v", len(v.Triangles)))
 
+	// fmt.Printf("Frametime: %v ms\n", ftMs)
+	// fmt.Printf("Frametime util: %v %% \n", util)
+	// fmt.Printf("Potential FPS: %v\n", pfps)
+	// fmt.Printf("Real FPS: %v\n", fps)
+
+}
+
+func (v *View) DrawBigDebug(line uint16, text string) {
+	// Starting position from OverlayOrigin
+	startX := v.OverlayOrigin[0]
+	startY := v.OverlayOrigin[1] + 6*line
+
+	// Loop through each character in the text
+	for charIndex, char := range text {
+		// Convert to uppercase since our BigCharacters map only has uppercase letters
+		charStr := strings.ToUpper(string(char))
+
+		// Get the big character representation from the map
+		bigChar, exists := utils.BigCharacters[charStr]
+		if !exists {
+			// Skip characters that don't exist in our map
+			continue
+		}
+
+		// Calculate the starting position for this character
+		charStartX := startX + uint16(charIndex*6)
+
+		// Loop through the 5x5 grid for this character
+		for row := 0; row < 5; row++ {
+			for col := 0; col < 5; col++ {
+				// Calculate the index in the flattened array
+				index := row*5 + col
+
+				// Calculate the position on screen for this pixel
+				pixelX := charStartX + uint16(col)
+				pixelY := startY + uint16(row)
+
+				// If the pixel should be filled (value is 1), touch the buffer at that position
+				if bigChar[index] == 1 {
+					v.TouchBuffer(utils.ColorMap["Red5"], pixelX, pixelY)
+				}
+			}
+		}
+	}
 }
 
 // Safely populate a pixel in the buffer respecting xy bounds
