@@ -38,11 +38,12 @@ type View struct {
 	CamZ   float64
 	CamRot []float64
 
-	DrawVerts     bool
-	DrawWire      bool
-	RenderWire    bool
-	RenderFace    bool
-	OverlayOrigin []uint16
+	DrawVerts      bool
+	DrawWire       bool
+	RenderWire     bool
+	RenderFace     bool
+	RenderLighting bool
+	OverlayOrigin  []uint16
 
 	CamMoveSpeed float64
 
@@ -53,8 +54,9 @@ type View struct {
 	MaxFrameTime time.Duration
 	Debug        bool
 
-	Xborder   string
-	Triangles []actors.Triangle
+	Xborder     string
+	Triangles   []actors.Triangle
+	PointLights []actors.PointLight
 }
 
 func CreateView(w uint16, h uint16, fps uint8, moveSpeed float64, debug bool) *View {
@@ -72,11 +74,12 @@ func CreateView(w uint16, h uint16, fps uint8, moveSpeed float64, debug bool) *V
 		FarClip:      -50,
 		CamMoveSpeed: moveSpeed,
 
-		DrawVerts:  false,
-		DrawWire:   false,
-		RenderWire: true,
-		RenderFace: true,
-		Debug:      debug,
+		DrawVerts:      false,
+		DrawWire:       false,
+		RenderWire:     true,
+		RenderFace:     true,
+		RenderLighting: true,
+		Debug:          debug,
 	}
 
 	// Calc max frame time
@@ -111,6 +114,9 @@ func (v *View) RegisterObject(o actors.Object) {
 	for _, tri := range o.Tris {
 		v.RegisterTriangle(tri)
 	}
+}
+func (v *View) RegisterPointLight(l actors.PointLight) {
+	v.PointLights = append(v.PointLights, l)
 }
 
 // Calculate the maximum allowable frametime to maintain the target framerate in MS
@@ -188,11 +194,17 @@ func (v *View) PrepBuffer() {
 		// Store depth values for an approximated zbuffer
 		var depthVals []float64
 
+		// Store worldspace verts for lighting calculations
+		var worldVerts [][]float64
+
 		// Calculate vertecies
 		for _, vert := range a.Verts() {
 
 			// Convert to worldspace
 			worldVert := utils.ApplyWorldMatrix(vert, parent.ObjX, parent.ObjY, parent.ObjZ, parent.Scale, parent.Rot)
+
+			// Store world verts for lighting calculations
+			worldVerts = append(worldVerts, worldVert)
 
 			camSpaceVert := utils.ApplyCamMatrix(v.CamX, v.CamY, v.CamZ, v.CamRot, worldVert[0], worldVert[1], worldVert[2])
 
@@ -328,6 +340,20 @@ func (v *View) PrepBuffer() {
 				lineOffsetLeft = 1
 				lineOffsetRight = 0
 			}
+
+			// Calculate barycenter of face for lighting
+			var xC, yC, zC float64
+
+			for _, point := range worldVerts {
+				xC += point[0]
+				yC += point[1]
+				zC += point[2]
+			}
+			xC /= float64(len(worldVerts))
+			yC /= float64(len(worldVerts))
+			zC /= float64(len(worldVerts))
+			center := []float64{xC, yC, zC}
+
 			// Within the bounding box, find the left and right raster bounds of triangle based on drawn lines
 			for y := minY; y < maxY; y++ {
 				if len(linePoints[y]) > 1 {
@@ -341,11 +367,7 @@ func (v *View) PrepBuffer() {
 						// Only draw if the pixel is infront of other faces, based on average face depth
 						if v.DepthBuffer[y][x] > depth {
 
-							// Objects should get darker as they are further from the camera
-							gamma := max(10-int(math.Round(10*depth/(.7*(math.Abs(v.FarClip)-math.Abs(v.NearClip))))), 1)
-
-							colorGamma := fmt.Sprintf("%s%v", parent.Color, gamma)
-							v.TouchBuffer(utils.ColorMap[colorGamma], x, y)
+							v.TouchBuffer(utils.ColorMap[v.CalculateFaceColor(parent.Color, depth, center, .3)], x, y)
 							v.DepthBuffer[y][x] = depth
 						}
 					}
@@ -361,6 +383,58 @@ func (v *View) PrepBuffer() {
 	if v.Debug {
 		v.DrawDebug()
 	}
+
+}
+
+// Returns a value between 1-10 referring to a color shade based on scene lighting and camera depth
+func (v *View) CalculateFaceColor(baseColor string, depth float64, center []float64, falloff float64) string {
+
+	if v.RenderLighting {
+
+		// 1 is the minimum luminance for a given color
+		var baseIntensity = 1
+
+		// Apply scene lighting
+		for _, light := range v.PointLights {
+			// Calculate worldspace distance from light to face
+			d := math.Sqrt(math.Pow(light.LightX-center[0], 2) + math.Pow(light.LightY-center[1], 2) + math.Pow(light.LightZ-center[2], 2))
+
+			// Check if face is within the lights falloff
+			if d <= light.Falloff {
+				lightFactor := int(5 - math.Round((5/light.Intensity)*(d/light.Falloff)))
+
+				// Bound the light between 1-5
+				lightFactor = max(0, lightFactor)
+				lightFactor = min(5, lightFactor)
+				baseIntensity += lightFactor
+			}
+		}
+
+		// Adjust based on camera depth
+
+		// Reduce luminance a bit for extremely far objects
+		// Apply falloff to depth range, this is where the effect will be applied
+		depthRange := falloff * (math.Abs(v.FarClip) - math.Abs(v.NearClip))
+		minDepth := math.Abs(v.FarClip) - depthRange //Minimum depth at which depth will be applied
+
+		maxEffect := 2
+
+		if depth >= minDepth {
+			dNorm := depth - minDepth
+			maxNorm := math.Abs(v.FarClip) - minDepth
+			baseIntensity -= int(math.Round(float64(maxEffect) * (dNorm / maxNorm)))
+		}
+
+		// Bound final luminance to colorspace
+		baseIntensity = min(baseIntensity, 10)
+		baseIntensity = max(baseIntensity, 1)
+
+		color := fmt.Sprintf("%s%v", baseColor, baseIntensity)
+
+		return color
+	}
+
+	return fmt.Sprintf("%s%v", baseColor, 5)
 
 }
 
@@ -489,6 +563,7 @@ func (v *View) DrawDebug() {
 	v.DrawBigDebug(2, fmt.Sprintf("POTENTIAL FPS: %.3f", pfps))
 	v.DrawBigDebug(3, fmt.Sprintf("REAL FPS: %.3f", fps))
 	v.DrawBigDebug(4, fmt.Sprintf("POLYCOUNT: %v", len(v.Triangles)))
+	v.DrawBigDebug(5, fmt.Sprintf("LIGHTCOUNT: %v", len(v.PointLights)))
 
 	// fmt.Printf("Frametime: %v ms\n", ftMs)
 	// fmt.Printf("Frametime util: %v %% \n", util)

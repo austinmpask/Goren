@@ -41,6 +41,12 @@ func main() {
 	view.RegisterObject(*panda)
 	view.RegisterObject(*miniRat)
 
+	light := actors.CreatePointLight(0, 15, -10, 1, 25)
+	light2 := actors.CreatePointLight(-10, 1, -10, .5, 25)
+
+	view.RegisterPointLight(*light)
+	view.RegisterPointLight(*light2)
+
 	// Main loop
 	for {
 
@@ -49,6 +55,7 @@ func main() {
 
 		// panda.Translate(0, 0, .1)
 		panda.Rotate(0, 1, 0)
+		// panda.Translate(0, .1, 0)
 
 		// Scene logic
 
