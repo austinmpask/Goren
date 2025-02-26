@@ -54,26 +54,25 @@ func ParseObj(path string) [][][]float64 {
 		// Face lines
 		if fields[0] == "f" {
 
-			// Case of triangle face. Ignoring others, so some detail will be lost
-			if len(fields) == 5 {
+			// Universal for 3 verts or face has more than 3 and need to break down into triangles
+			if len(fields) >= 4 {
+				// Collect all verts
+				vs := []int{}
+				for i := 1; i < len(fields); i++ {
 
-				// Get vertex indecies
-				v1Str := strings.Split(fields[1], "/")[0]
-				v2Str := strings.Split(fields[2], "/")[0]
-				v3Str := strings.Split(fields[3], "/")[0]
-				v1, err1 := strconv.Atoi(v1Str)
-				v2, err2 := strconv.Atoi(v2Str)
-				v3, err3 := strconv.Atoi(v3Str)
-				if err1 != nil || err2 != nil || err3 != nil {
-					return nil
+					vertexStr := strings.Split(fields[i], "/")[0]
+					vertexInt, _ := strconv.Atoi(vertexStr)
+					vertexInt-- //0 index
+					vs = append(vs, vertexInt)
 				}
-				v1-- //Convert to 0 index
-				v2--
-				v3--
 
-				// Add a triangle of those vertecies
-				triangle := [][]float64{verts[v1], verts[v2], verts[v3]}
-				tris = append(tris, triangle)
+				// Create triangles - .obj face traces face counter clockwise
+				// First vert will be origin for all triangles, create triangles going around the face
+				for i := 1; i < len(vs)-1; i++ {
+					triangle := [][]float64{verts[vs[0]], verts[vs[i]], verts[vs[i+1]]}
+					tris = append(tris, triangle)
+
+				}
 
 			}
 		}

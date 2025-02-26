@@ -242,30 +242,25 @@ func (v *View) PrepBuffer() {
 				for i := range len(rasterVerts) {
 					for j := range len(rasterVerts) {
 						if i != j {
-							// Is i in connected
-							if c1, ok := connected[i]; ok {
-								// Is j in connected[i]
-								if _, ok := c1[j]; !ok {
-									drawn := v.DrawLine(rasterVerts[i], rasterVerts[j])
-									rasterLines = append(rasterLines, drawn...)
-									// Record
-									// If j in connected
-									if _, ok := connected[j]; !ok {
-										connected[j] = make(map[int]bool)
-									}
-									connected[j][i] = true
-								}
-							} else {
-								drawn := v.DrawLine(rasterVerts[i], rasterVerts[j])
-								rasterLines = append(rasterLines, drawn...)
-								// Record
-								// If j in connected
-								if _, ok := connected[j]; !ok {
-									connected[j] = make(map[int]bool)
 
+							// Check if i has been connected to anything
+							if _, ok := connected[i]; ok {
+
+								// Check if i has been connected to j, then skip
+								if _, ok := connected[i][j]; ok {
+									continue
 								}
-								connected[j][i] = true
 							}
+
+							drawn := v.DrawLine(rasterVerts[i], rasterVerts[j])
+							rasterLines = append(rasterLines, drawn...)
+
+							// Record the edge as drawn
+							if _, ok := connected[i]; !ok {
+								connected[i] = make(map[int]bool)
+							}
+							connected[i][j] = true
+
 						}
 
 					}
@@ -278,30 +273,35 @@ func (v *View) PrepBuffer() {
 		if v.RenderFace {
 			// Calculate the min/max X and Y in triangle verts for bounding box
 
-			var minX, maxX, minY, maxY uint16
+			var maxX, maxY uint16
+			var minX, minY uint16 = math.MaxUint16, math.MaxUint16
 
-			for _, v := range rasterVerts {
+			for _, vert := range rasterVerts {
 
 				// Handle X
-				if v[0] < minX {
-					minX = v[0]
-				} else if v[0] > maxX {
-					maxX = v[0]
+				if vert[0] < minX {
+					minX = vert[0]
+				}
+				if vert[0] > maxX {
+					maxX = vert[0]
 				}
 				// Handle y
-				if v[1] < minY {
-					minY = v[1]
-				} else if v[1] > maxY {
-					maxY = v[1]
+				if vert[1] < minY {
+					minY = vert[1]
+				}
+				if vert[1] > maxY {
+					maxY = vert[1]
 				}
 			}
 
 			// Reshape lines slice to be more useful here
+			var allPoints [][]uint16 = rasterLines
+			allPoints = append(allPoints, rasterVerts...)
 
 			linePoints := make(map[uint16][]uint16)
 
 			// Map what x coordinates have been drawn with a given Y
-			for _, v := range rasterLines {
+			for _, v := range allPoints {
 				x := v[0]
 				y := v[1]
 

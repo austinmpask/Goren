@@ -15,8 +15,8 @@ func CreateObject(triangles [][][]float64, objX float64, objY float64, objZ floa
 	o := Object{
 		Tris:  []Triangle{},
 		Scale: scale,
-		ObjX:  objX,
-		ObjY:  objY,
+		ObjX:  -objX,
+		ObjY:  -objY,
 		ObjZ:  objZ,
 		Rot:   []float64{0, 0, 0},
 	}

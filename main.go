@@ -34,9 +34,9 @@ func main() {
 	go input.ManageKeys()
 
 	// Actual program
-	view := display.CreateView(256, 224, 60, .1)
+	view := display.CreateView(256, 224, 30, .1)
 
-	panda := actors.CreateObject(utils.ParseObj("./panda.obj"), 0, 0, 10, .1)
+	panda := actors.CreateObject(utils.ParseObj("./rat.obj"), 0, 3, 10, .2)
 	view.RegisterObject(*panda)
 
 	// Main loop
@@ -46,7 +46,7 @@ func main() {
 		view.ClearBuffer()
 
 		// panda.Translate(0, 0, .1)
-		panda.Rotate(0, 1, 0)
+		panda.Rotate(0, 5, 0)
 
 		// Scene logic
 
