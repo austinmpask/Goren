@@ -65,14 +65,14 @@ func DefaultView() *View {
 		Ypx: 240,
 		// Xpx:          80,
 		// Ypx:          40,
-		TargetFPS:    100,
+		TargetFPS:    60,
 		Fov:          90,
 		CamX:         0,
 		CamY:         3,
 		CamZ:         10,
 		CamRot:       []float64{0, 0, 0},
 		NearClip:     -1,
-		FarClip:      -15,
+		FarClip:      -150,
 		CamMoveSpeed: 0.05,
 	}
 
@@ -99,6 +99,12 @@ func DefaultView() *View {
 // Add actors to the scene
 func (v *View) RegisterActor(a actors.Actor) {
 	v.Actors = append(v.Actors, a)
+}
+
+func (v *View) RegisterObject(o actors.Object) {
+	for _, tri := range o.Tris {
+		v.RegisterActor(tri)
+	}
 }
 
 // Calculate the maximum allowable frametime to maintain the target framerate in MS
@@ -361,6 +367,7 @@ func (v *View) DrawDebug() {
 	fmt.Printf("Frametime util: %v %% \n", util)
 	fmt.Printf("Potential FPS: %v\n", pfps)
 	fmt.Printf("Real FPS: %v\n", fps)
+
 }
 
 // Safely populate a pixel in the buffer respecting xy bounds

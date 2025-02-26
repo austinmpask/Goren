@@ -36,33 +36,38 @@ func main() {
 	// Actual program
 	view := display.DefaultView()
 
-	triangles := []actors.Actor{
-		actors.CreateTriangle([]float64{-0.5, 0, 0}, []float64{0.5, 0, 0}, []float64{0.5, 5, 0}),
-		actors.CreateTriangle([]float64{-0.5, 0, 0}, []float64{0.5, 5, 0}, []float64{-0.5, 5, 0}),
-		actors.CreateTriangle([]float64{-0.5, 0, -0.5}, []float64{0.5, 0, -0.5}, []float64{0.5, 5, -0.5}),
-		actors.CreateTriangle([]float64{-0.5, 0, -0.5}, []float64{0.5, 5, -0.5}, []float64{-0.5, 5, -0.5}),
-		actors.CreateTriangle([]float64{-0.5, 0, 0}, []float64{-0.5, 5, 0}, []float64{-0.5, 5, -0.5}),
-		actors.CreateTriangle([]float64{-0.5, 0, 0}, []float64{-0.5, 5, -0.5}, []float64{-0.5, 0, -0.5}),
-		actors.CreateTriangle([]float64{0.5, 0, 0}, []float64{0.5, 5, -0.5}, []float64{0.5, 5, 0}),
-		actors.CreateTriangle([]float64{0.5, 0, 0}, []float64{0.5, 0, -0.5}, []float64{0.5, 5, -0.5}),
-		actors.CreateTriangle([]float64{0, 5, 0}, []float64{1, 6, 0}, []float64{0.5, 5.5, 0.5}),
-		actors.CreateTriangle([]float64{0, 5, 0}, []float64{0.5, 5.5, 0.5}, []float64{0, 6, 0.5}),
-		actors.CreateTriangle([]float64{0, 5, 0}, []float64{0, 6, 0.5}, []float64{-0.5, 5.5, 0.5}),
-		actors.CreateTriangle([]float64{0, 5, 0}, []float64{-0.5, 5.5, 0.5}, []float64{-1, 6, 0}),
-		actors.CreateTriangle([]float64{0, 5, 0}, []float64{-1, 6, 0}, []float64{-0.5, 5.5, -0.5}),
-		actors.CreateTriangle([]float64{0, 5, 0}, []float64{-0.5, 5.5, -0.5}, []float64{0, 6, -0.5}),
-		actors.CreateTriangle([]float64{0, 5, 0}, []float64{0, 6, -0.5}, []float64{0.5, 5.5, -0.5}),
-		actors.CreateTriangle([]float64{0, 5, 0}, []float64{0.5, 5.5, -0.5}, []float64{1, 6, 0}),
-		actors.CreateTriangle([]float64{0, 4, 0}, []float64{1, 5, 1}, []float64{-1, 5, 1}),
-		actors.CreateTriangle([]float64{0, 4, 0}, []float64{-1, 5, 1}, []float64{-1, 5, -1}),
-		actors.CreateTriangle([]float64{0, 4, 0}, []float64{-1, 5, -1}, []float64{1, 5, -1}),
-		actors.CreateTriangle([]float64{0, 4, 0}, []float64{1, 5, -1}, []float64{1, 5, 1}),
-	}
+	catTriangles, _ := utils.ParseObj("./panda.obj")
 
-	for _, t := range triangles {
-		view.RegisterActor(t)
+	cat := actors.CreateObject(catTriangles)
+	view.RegisterObject(cat)
 
-	}
+	// triangles := []actors.Actor{
+	// 	actors.CreateTriangle([]float64{-0.5, 0, 0}, []float64{0.5, 0, 0}, []float64{0.5, 5, 0}),
+	// 	actors.CreateTriangle([]float64{-0.5, 0, 0}, []float64{0.5, 5, 0}, []float64{-0.5, 5, 0}),
+	// 	actors.CreateTriangle([]float64{-0.5, 0, -0.5}, []float64{0.5, 0, -0.5}, []float64{0.5, 5, -0.5}),
+	// 	actors.CreateTriangle([]float64{-0.5, 0, -0.5}, []float64{0.5, 5, -0.5}, []float64{-0.5, 5, -0.5}),
+	// 	actors.CreateTriangle([]float64{-0.5, 0, 0}, []float64{-0.5, 5, 0}, []float64{-0.5, 5, -0.5}),
+	// 	actors.CreateTriangle([]float64{-0.5, 0, 0}, []float64{-0.5, 5, -0.5}, []float64{-0.5, 0, -0.5}),
+	// 	actors.CreateTriangle([]float64{0.5, 0, 0}, []float64{0.5, 5, -0.5}, []float64{0.5, 5, 0}),
+	// 	actors.CreateTriangle([]float64{0.5, 0, 0}, []float64{0.5, 0, -0.5}, []float64{0.5, 5, -0.5}),
+	// 	actors.CreateTriangle([]float64{0, 5, 0}, []float64{1, 6, 0}, []float64{0.5, 5.5, 0.5}),
+	// 	actors.CreateTriangle([]float64{0, 5, 0}, []float64{0.5, 5.5, 0.5}, []float64{0, 6, 0.5}),
+	// 	actors.CreateTriangle([]float64{0, 5, 0}, []float64{0, 6, 0.5}, []float64{-0.5, 5.5, 0.5}),
+	// 	actors.CreateTriangle([]float64{0, 5, 0}, []float64{-0.5, 5.5, 0.5}, []float64{-1, 6, 0}),
+	// 	actors.CreateTriangle([]float64{0, 5, 0}, []float64{-1, 6, 0}, []float64{-0.5, 5.5, -0.5}),
+	// 	actors.CreateTriangle([]float64{0, 5, 0}, []float64{-0.5, 5.5, -0.5}, []float64{0, 6, -0.5}),
+	// 	actors.CreateTriangle([]float64{0, 5, 0}, []float64{0, 6, -0.5}, []float64{0.5, 5.5, -0.5}),
+	// 	actors.CreateTriangle([]float64{0, 5, 0}, []float64{0.5, 5.5, -0.5}, []float64{1, 6, 0}),
+	// 	actors.CreateTriangle([]float64{0, 4, 0}, []float64{1, 5, 1}, []float64{-1, 5, 1}),
+	// 	actors.CreateTriangle([]float64{0, 4, 0}, []float64{-1, 5, 1}, []float64{-1, 5, -1}),
+	// 	actors.CreateTriangle([]float64{0, 4, 0}, []float64{-1, 5, -1}, []float64{1, 5, -1}),
+	// 	actors.CreateTriangle([]float64{0, 4, 0}, []float64{1, 5, -1}, []float64{1, 5, 1}),
+	// }
+
+	// for _, t := range triangles {
+	// 	view.RegisterActor(t)
+
+	// }
 
 	// Main loop
 	for {
