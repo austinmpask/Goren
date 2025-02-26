@@ -583,7 +583,7 @@ func (v *View) DrawDebug() {
 	v.DrawBigDebug(5, fmt.Sprintf("LIGHTS:  %v", len(v.PointLights)), c1)
 	v.DrawBigDebug(7, fmt.Sprintf("FT AVG:     %.3fms", aFt), c2)
 	v.DrawBigDebug(8, fmt.Sprintf("FT UTL AVG: %.3f%%", 100*aFt/maxFtMs), c2)
-	v.DrawBigDebug(9, fmt.Sprintf("RL FPS AVG: %.3f", 1000/aFt), c2)
+	v.DrawBigDebug(9, fmt.Sprintf("PT FPS AVG: %.3f", 1000/aFt), c2)
 
 	v.PrevFt = aFt
 
@@ -645,16 +645,17 @@ func (v *View) StartFrame() {
 }
 
 // Log the time once the buffer and anything else was drawn to screen
-func (v *View) EndFrame() {
-
-	v.FrameTime = time.Since(v.FrameStart)
+func (v *View) EndFrame(ft chan time.Duration) {
+	t := time.Since(v.FrameStart)
+	ft <- t
+	v.FrameTime = t
 }
 
 // Minimize screen tearing by waiting until frametime for the target framerate has elapsed before continuing
-func (v *View) FrameSync() {
-	frameTimeSlack := v.MaxFrameTime - v.FrameTime
+func (v *View) FrameSync(end time.Duration, adj int) {
+	frameTimeSlack := v.MaxFrameTime - end
 
-	targetTime := time.Now().Add(frameTimeSlack).Add(time.Duration(3) * time.Microsecond)
+	targetTime := time.Now().Add(frameTimeSlack).Add(time.Duration(adj) * time.Microsecond)
 
 	// Use for loop instead, more accurate scheduling than sleep. Sleep introduces significant drift at high refresh rates
 	for time.Now().Before(targetTime) {

@@ -1,17 +1,14 @@
 package utils
 
 import (
+	"fmt"
 	"math"
-	"os"
-	"os/exec"
 	"time"
 )
 
-// Clear terminal window TODO: make cross platform
+// Clear terminal window
 func ClearScreen() {
-	cmd := exec.Command("clear")
-	cmd.Stdout = os.Stdout
-	cmd.Run()
+	fmt.Print("\033[H\033[2J")
 }
 
 // Convert a duration to millisecond value

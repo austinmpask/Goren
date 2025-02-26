@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 func main() {
@@ -47,19 +48,19 @@ func main() {
 	view.RegisterPointLight(light)
 	view.RegisterPointLight(light2)
 
+	frameTime := make(chan time.Duration)
 	// Main loop benchmark
 	for light2.LightZ < 1 {
 
 		view.StartFrame()
 		view.ClearBuffer()
-
 		// panda.Translate(0, 0, .1)
+
 		panda.Rotate(0, 1, 0)
 		panda.Translate(0, math.Sin(float64(view.FrameCount)/10), 0)
 
 		miniRat.Rotate(1, 1, 1)
 		miniRat.Translate(math.Sin(float64(view.FrameCount)/10), 0, 0)
-
 		light.Translate(.1, 0, 0)
 		light2.Translate(0, 0, .1)
 
@@ -93,9 +94,10 @@ func main() {
 
 		view.PrepBuffer()
 		view.DrawBuffer()
-		// view.DrawDebug()
-		view.EndFrame()
-		view.FrameSync()
+
+		// Send frametime to framesync in real time
+		go view.EndFrame(frameTime)
+		view.FrameSync(<-frameTime, 3)
 
 	}
 
