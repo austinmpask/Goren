@@ -36,26 +36,35 @@ func main() {
 	// Actual program
 	view := display.CreateView(256, 224, 60, .1, true)
 
-	panda := actors.CreateObject(utils.ParseObj("./rat.obj"), 0, 3, 8, .2, "Green")
+	panda := actors.CreateObject(utils.ParseObj("./rat.obj"), 0, 0, 8, .2, "Green")
 	miniRat := actors.CreateObject(utils.ParseObj("./rat.obj"), -5, 3, 23, .1, "Red")
 	view.RegisterObject(*panda)
 	view.RegisterObject(*miniRat)
 
-	light := actors.CreatePointLight(0, 15, -10, 1, 25)
-	light2 := actors.CreatePointLight(-10, 1, -10, .5, 25)
+	light := actors.CreatePointLight(-20, 15, -10, 1, 25)
+	light2 := actors.CreatePointLight(0, 0, -30, .5, 25)
 
-	view.RegisterPointLight(*light)
-	view.RegisterPointLight(*light2)
+	view.RegisterPointLight(light)
+	view.RegisterPointLight(light2)
 
-	// Main loop
-	for {
+	// Main loop benchmark
+	for light2.LightZ < 1 {
 
 		view.StartFrame()
 		view.ClearBuffer()
 
 		// panda.Translate(0, 0, .1)
 		panda.Rotate(0, 1, 0)
-		// panda.Translate(0, .1, 0)
+		panda.Translate(0, math.Sin(float64(view.FrameCount)/10), 0)
+
+		miniRat.Rotate(1, 1, 1)
+		miniRat.Translate(math.Sin(float64(view.FrameCount)/10), 0, 0)
+
+		light.Translate(.1, 0, 0)
+		light2.Translate(0, 0, .1)
+
+		view.MoveCam(0, .08, -.05)
+		view.RotateCam(.2, 0, 0)
 
 		// Scene logic
 

@@ -21,3 +21,9 @@ func CreatePointLight(x float64, y float64, z float64, intensity float64, fallof
 
 	return &l
 }
+
+func (l *PointLight) Translate(dx float64, dy float64, dz float64) {
+	l.LightX += dx
+	l.LightY -= dy
+	l.LightZ += dz
+}

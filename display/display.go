@@ -53,10 +53,12 @@ type View struct {
 
 	MaxFrameTime time.Duration
 	Debug        bool
+	FrameCount   uint64
+	PrevFt       float64
 
 	Xborder     string
 	Triangles   []actors.Triangle
-	PointLights []actors.PointLight
+	PointLights []*actors.PointLight
 }
 
 func CreateView(w uint16, h uint16, fps uint8, moveSpeed float64, debug bool) *View {
@@ -115,7 +117,7 @@ func (v *View) RegisterObject(o actors.Object) {
 		v.RegisterTriangle(tri)
 	}
 }
-func (v *View) RegisterPointLight(l actors.PointLight) {
+func (v *View) RegisterPointLight(l *actors.PointLight) {
 	v.PointLights = append(v.PointLights, l)
 }
 
@@ -381,6 +383,7 @@ func (v *View) PrepBuffer() {
 
 	// Draw debug stats on the screen in big text
 	if v.Debug {
+		v.FrameCount++
 		v.DrawDebug()
 	}
 
@@ -555,24 +558,38 @@ func (v *View) DrawDebug() {
 
 	if frEndMs != 0 {
 		fps = 1000 / frEndMs
+
+	}
+
+	// Averages
+
+	var aFt float64
+
+	if v.FrameCount > 1 {
+		alpha := 1.0 / float64(v.FrameCount)
+		aFt = (1-alpha)*v.PrevFt + alpha*ftMs
+	} else {
+		aFt = ftMs
 	}
 
 	// Print directly to buffer
-	v.DrawBigDebug(0, fmt.Sprintf("FRAMETIME: %.3f", ftMs))
-	v.DrawBigDebug(1, fmt.Sprintf("FRAMETIME UTIL: %.3f%%", util))
-	v.DrawBigDebug(2, fmt.Sprintf("POTENTIAL FPS: %.3f", pfps))
-	v.DrawBigDebug(3, fmt.Sprintf("REAL FPS: %.3f", fps))
-	v.DrawBigDebug(4, fmt.Sprintf("POLYCOUNT: %v", len(v.Triangles)))
-	v.DrawBigDebug(5, fmt.Sprintf("LIGHTCOUNT: %v", len(v.PointLights)))
+	c1 := "Red6"
+	c2 := "Cyan6"
+	v.DrawBigDebug(0, fmt.Sprintf("FT:      %.3fms", ftMs), c1)
+	v.DrawBigDebug(1, fmt.Sprintf("FT UTIL: %.3f%%", util), c1)
+	v.DrawBigDebug(2, fmt.Sprintf("P FPS:   %.3f", pfps), c1)
+	v.DrawBigDebug(3, fmt.Sprintf("RL FPS:  %.3f", fps), c1)
+	v.DrawBigDebug(4, fmt.Sprintf("POLYS:   %v", len(v.Triangles)), c1)
+	v.DrawBigDebug(5, fmt.Sprintf("LIGHTS:  %v", len(v.PointLights)), c1)
+	v.DrawBigDebug(7, fmt.Sprintf("FT AVG:     %.3fms", aFt), c2)
+	v.DrawBigDebug(8, fmt.Sprintf("FT UTL AVG: %.3f%%", 100*aFt/maxFtMs), c2)
+	v.DrawBigDebug(9, fmt.Sprintf("RL FPS AVG: %.3f", 1000/aFt), c2)
 
-	// fmt.Printf("Frametime: %v ms\n", ftMs)
-	// fmt.Printf("Frametime util: %v %% \n", util)
-	// fmt.Printf("Potential FPS: %v\n", pfps)
-	// fmt.Printf("Real FPS: %v\n", fps)
+	v.PrevFt = aFt
 
 }
 
-func (v *View) DrawBigDebug(line uint16, text string) {
+func (v *View) DrawBigDebug(line uint16, text string, color string) {
 	// Starting position from OverlayOrigin
 	startX := v.OverlayOrigin[0]
 	startY := v.OverlayOrigin[1] + 6*line
@@ -604,7 +621,7 @@ func (v *View) DrawBigDebug(line uint16, text string) {
 
 				// If the pixel should be filled (value is 1), touch the buffer at that position
 				if bigChar[index] == 1 {
-					v.TouchBuffer(utils.ColorMap["Red5"], pixelX, pixelY)
+					v.TouchBuffer(utils.ColorMap[color], pixelX, pixelY)
 				}
 			}
 		}
@@ -637,7 +654,7 @@ func (v *View) EndFrame() {
 func (v *View) FrameSync() {
 	frameTimeSlack := v.MaxFrameTime - v.FrameTime
 
-	targetTime := time.Now().Add(frameTimeSlack)
+	targetTime := time.Now().Add(frameTimeSlack).Add(time.Duration(3) * time.Microsecond)
 
 	// Use for loop instead, more accurate scheduling than sleep. Sleep introduces significant drift at high refresh rates
 	for time.Now().Before(targetTime) {
