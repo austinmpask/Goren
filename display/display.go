@@ -55,7 +55,7 @@ type View struct {
 	MaxFrameTime time.Duration
 
 	Xborder string
-	Actors  []actors.Actor
+	Actors  []actors.Triangle
 }
 
 func DefaultView() *View {
@@ -65,7 +65,7 @@ func DefaultView() *View {
 		Ypx: 240,
 		// Xpx:          80,
 		// Ypx:          40,
-		TargetFPS:    60,
+		TargetFPS:    65,
 		Fov:          90,
 		CamX:         0,
 		CamY:         3,
@@ -73,7 +73,7 @@ func DefaultView() *View {
 		CamRot:       []float64{0, 0, 0},
 		NearClip:     -1,
 		FarClip:      -150,
-		CamMoveSpeed: 0.05,
+		CamMoveSpeed: 0.25,
 	}
 
 	// Calc max frame time
@@ -97,8 +97,8 @@ func DefaultView() *View {
 }
 
 // Add actors to the scene
-func (v *View) RegisterActor(a actors.Actor) {
-	v.Actors = append(v.Actors, a)
+func (v *View) RegisterActor(t actors.Triangle) {
+	v.Actors = append(v.Actors, t)
 }
 
 func (v *View) RegisterObject(o actors.Object) {
@@ -166,13 +166,18 @@ func (v *View) CalcProjectionConstants() {
 func (v *View) PrepBuffer() {
 
 	for _, a := range v.Actors {
+		parent := a.ObjRef
 
 		//Save raster verts for connecting with lines after vertex pass
 		var rasterVerts [][]uint16
 
 		// Calculate vertecies
 		for _, vert := range a.Verts() {
-			camSpaceVert := utils.ApplyCamMatrix(v.CamX, v.CamY, v.CamZ, v.CamRot, vert[0], vert[1], vert[2])
+
+			// Convert to worldspace
+			worldVert := utils.ApplyWorldMatrix(vert, parent.ObjX, parent.ObjY, parent.ObjZ, parent.Scale, parent.Rot)
+
+			camSpaceVert := utils.ApplyCamMatrix(v.CamX, v.CamY, v.CamZ, v.CamRot, worldVert[0], worldVert[1], worldVert[2])
 
 			// fmt.Printf("Camspace Vert: %v\n", camSpaceVert)
 			clipVert := utils.ApplyProjectionMatrix(camSpaceVert, v.XProjConst, v.YProjConst, v.ZProjConst, v.WProjConst)

@@ -1,23 +1,43 @@
 package actors
 
 type Object struct {
-	Tris []Actor
+	Tris []Triangle
 	ObjX float64
 	ObjY float64
 	ObjZ float64
+	Rot  []float64
+
+	Scale float64
 }
 
-func CreateObject(triangles [][][]float64) Object {
+func CreateObject(triangles [][][]float64, objX float64, objY float64, objZ float64, scale float64) *Object {
 
 	o := Object{
-		Tris: []Actor{},
+		Tris:  []Triangle{},
+		Scale: scale,
+		ObjX:  objX,
+		ObjY:  objY,
+		ObjZ:  objZ,
+		Rot:   []float64{0, 0, 0},
 	}
 	// Make triangles out of the coordinates
 	for _, t := range triangles {
-		tri := CreateTriangle(t[0], t[1], t[2])
+		tri := CreateTriangle(t[0], t[1], t[2], &o)
 		o.Tris = append(o.Tris, tri)
 
 	}
 
-	return o
+	return &o
+}
+
+func (o *Object) Translate(dx float64, dy float64, dz float64) {
+	o.ObjX -= dx
+	o.ObjY -= dy
+	o.ObjZ -= dz
+}
+
+func (o *Object) Rotate(rx float64, ry float64, rz float64) {
+	o.Rot[0] += rx
+	o.Rot[1] += ry
+	o.Rot[2] += rz
 }

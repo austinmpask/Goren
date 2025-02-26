@@ -36,44 +36,17 @@ func main() {
 	// Actual program
 	view := display.DefaultView()
 
-	catTriangles, _ := utils.ParseObj("./panda.obj")
-
-	cat := actors.CreateObject(catTriangles)
-	view.RegisterObject(cat)
-
-	// triangles := []actors.Actor{
-	// 	actors.CreateTriangle([]float64{-0.5, 0, 0}, []float64{0.5, 0, 0}, []float64{0.5, 5, 0}),
-	// 	actors.CreateTriangle([]float64{-0.5, 0, 0}, []float64{0.5, 5, 0}, []float64{-0.5, 5, 0}),
-	// 	actors.CreateTriangle([]float64{-0.5, 0, -0.5}, []float64{0.5, 0, -0.5}, []float64{0.5, 5, -0.5}),
-	// 	actors.CreateTriangle([]float64{-0.5, 0, -0.5}, []float64{0.5, 5, -0.5}, []float64{-0.5, 5, -0.5}),
-	// 	actors.CreateTriangle([]float64{-0.5, 0, 0}, []float64{-0.5, 5, 0}, []float64{-0.5, 5, -0.5}),
-	// 	actors.CreateTriangle([]float64{-0.5, 0, 0}, []float64{-0.5, 5, -0.5}, []float64{-0.5, 0, -0.5}),
-	// 	actors.CreateTriangle([]float64{0.5, 0, 0}, []float64{0.5, 5, -0.5}, []float64{0.5, 5, 0}),
-	// 	actors.CreateTriangle([]float64{0.5, 0, 0}, []float64{0.5, 0, -0.5}, []float64{0.5, 5, -0.5}),
-	// 	actors.CreateTriangle([]float64{0, 5, 0}, []float64{1, 6, 0}, []float64{0.5, 5.5, 0.5}),
-	// 	actors.CreateTriangle([]float64{0, 5, 0}, []float64{0.5, 5.5, 0.5}, []float64{0, 6, 0.5}),
-	// 	actors.CreateTriangle([]float64{0, 5, 0}, []float64{0, 6, 0.5}, []float64{-0.5, 5.5, 0.5}),
-	// 	actors.CreateTriangle([]float64{0, 5, 0}, []float64{-0.5, 5.5, 0.5}, []float64{-1, 6, 0}),
-	// 	actors.CreateTriangle([]float64{0, 5, 0}, []float64{-1, 6, 0}, []float64{-0.5, 5.5, -0.5}),
-	// 	actors.CreateTriangle([]float64{0, 5, 0}, []float64{-0.5, 5.5, -0.5}, []float64{0, 6, -0.5}),
-	// 	actors.CreateTriangle([]float64{0, 5, 0}, []float64{0, 6, -0.5}, []float64{0.5, 5.5, -0.5}),
-	// 	actors.CreateTriangle([]float64{0, 5, 0}, []float64{0.5, 5.5, -0.5}, []float64{1, 6, 0}),
-	// 	actors.CreateTriangle([]float64{0, 4, 0}, []float64{1, 5, 1}, []float64{-1, 5, 1}),
-	// 	actors.CreateTriangle([]float64{0, 4, 0}, []float64{-1, 5, 1}, []float64{-1, 5, -1}),
-	// 	actors.CreateTriangle([]float64{0, 4, 0}, []float64{-1, 5, -1}, []float64{1, 5, -1}),
-	// 	actors.CreateTriangle([]float64{0, 4, 0}, []float64{1, 5, -1}, []float64{1, 5, 1}),
-	// }
-
-	// for _, t := range triangles {
-	// 	view.RegisterActor(t)
-
-	// }
+	panda := actors.CreateObject(utils.ParseObj("./panda.obj"), 0, 0, 10, .1)
+	view.RegisterObject(*panda)
 
 	// Main loop
 	for {
 
 		view.StartFrame()
 		view.ClearBuffer()
+
+		// panda.Translate(0, 0, .1)
+		panda.Rotate(0, 1, 0)
 
 		// Scene logic
 
@@ -91,13 +64,13 @@ func main() {
 		case "z":
 			view.MoveCam(0, -view.CamMoveSpeed, 0)
 		case "i":
-			view.RotateCam(-4*view.CamMoveSpeed, 0, 0)
+			view.RotateCam(-5*view.CamMoveSpeed, 0, 0)
 		case "k":
-			view.RotateCam(4*view.CamMoveSpeed, 0, 0)
+			view.RotateCam(5*view.CamMoveSpeed, 0, 0)
 		case "l":
-			view.RotateCam(0, 8*view.CamMoveSpeed, 0)
+			view.RotateCam(0, 10*view.CamMoveSpeed, 0)
 		case "j":
-			view.RotateCam(0, -8*view.CamMoveSpeed, 0)
+			view.RotateCam(0, -10*view.CamMoveSpeed, 0)
 		}
 
 		view.PrepBuffer()

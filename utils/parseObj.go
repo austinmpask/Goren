@@ -2,17 +2,16 @@ package utils
 
 import (
 	"bufio"
-	"fmt"
 	"os"
 	"strconv"
 	"strings"
 )
 
 // Parse .obj file to convert to Object actor which is made up of Triangles
-func ParseObj(path string) ([][][]float64, error) {
+func ParseObj(path string) [][][]float64 {
 	file, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		return nil
 	}
 	defer file.Close()
 
@@ -35,17 +34,17 @@ func ParseObj(path string) ([][][]float64, error) {
 			// Parse the X, Y, Z coordinates
 			x, err := strconv.ParseFloat(fields[1], 64)
 			if err != nil {
-				return nil, fmt.Errorf("invalid X coordinate: %v", err)
+				return nil
 			}
 
 			y, err := strconv.ParseFloat(fields[2], 64)
 			if err != nil {
-				return nil, fmt.Errorf("invalid Y coordinate: %v", err)
+				return nil
 			}
 
 			z, err := strconv.ParseFloat(fields[3], 64)
 			if err != nil {
-				return nil, fmt.Errorf("invalid Z coordinate: %v", err)
+				return nil
 			}
 
 			// Add to slice of vertecies
@@ -66,7 +65,7 @@ func ParseObj(path string) ([][][]float64, error) {
 				v2, err2 := strconv.Atoi(v2Str)
 				v3, err3 := strconv.Atoi(v3Str)
 				if err1 != nil || err2 != nil || err3 != nil {
-					return nil, fmt.Errorf("invalid vertex")
+					return nil
 				}
 				v1-- //Convert to 0 index
 				v2--
@@ -79,5 +78,5 @@ func ParseObj(path string) ([][][]float64, error) {
 			}
 		}
 	}
-	return tris, nil
+	return tris
 }

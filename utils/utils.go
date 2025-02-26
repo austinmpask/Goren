@@ -95,6 +95,23 @@ func RotateVecXYZ(vec []float64, rot []float64) []float64 {
 	return x
 }
 
+func ApplyWorldMatrix(vert []float64, objX float64, objY float64, objZ float64, objScale float64, objRot []float64) []float64 {
+
+	// Rotate
+	rotated := RotateVecXYZ(vert, objRot)
+	//Scale
+	sX := rotated[0] * objScale
+	sY := rotated[1] * objScale
+	sZ := rotated[2] * objScale
+
+	// Translate
+	xWorld := sX - objX
+	yWorld := sY - objY
+	zWorld := sZ - objZ
+
+	return []float64{xWorld, yWorld, zWorld}
+}
+
 // Apply camera translation and rotation to a vector
 func ApplyCamMatrix(camX float64, camY float64, camZ float64, camRot []float64, x float64, y float64, z float64) []float64 {
 	// Translate

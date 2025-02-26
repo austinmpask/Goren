@@ -1,20 +1,22 @@
 package actors
 
 type Triangle struct {
-	A []float64
-	B []float64
-	C []float64
+	A      []float64
+	B      []float64
+	C      []float64
+	ObjRef *Object
 }
 
 // Basic triangle for rendering which inherits the Actor interface
-func CreateTriangle(a []float64, b []float64, c []float64) Actor {
+func CreateTriangle(a []float64, b []float64, c []float64, obj *Object) Triangle {
 	t := Triangle{
-		A: a,
-		B: b,
-		C: c,
+		A:      a,
+		B:      b,
+		C:      c,
+		ObjRef: obj,
 	}
 
-	return &t
+	return t
 }
 
 func (t *Triangle) Verts() [][]float64 {
