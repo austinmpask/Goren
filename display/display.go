@@ -5,6 +5,7 @@ import (
 	"go3d/actors"
 	"go3d/utils"
 	"math"
+	"slices"
 	"strings"
 	"time"
 )
@@ -46,6 +47,11 @@ type View struct {
 	CamZ   float64
 	CamRot []float64
 
+	DrawVerts  bool
+	DrawWire   bool
+	RenderWire bool
+	RenderFace bool
+
 	CamMoveSpeed float64
 
 	FrameStart time.Time
@@ -54,18 +60,16 @@ type View struct {
 
 	MaxFrameTime time.Duration
 
-	Xborder string
-	Actors  []actors.Triangle
+	Xborder   string
+	Triangles []actors.Triangle
 }
 
-func DefaultView() *View {
+func CreateView(w uint16, h uint16, fps uint8, moveSpeed float64) *View {
 
 	v := View{
-		Xpx: 640,
-		Ypx: 240,
-		// Xpx:          80,
-		// Ypx:          40,
-		TargetFPS:    65,
+		Xpx:          w,
+		Ypx:          h,
+		TargetFPS:    fps,
 		Fov:          90,
 		CamX:         0,
 		CamY:         3,
@@ -73,7 +77,12 @@ func DefaultView() *View {
 		CamRot:       []float64{0, 0, 0},
 		NearClip:     -1,
 		FarClip:      -150,
-		CamMoveSpeed: 0.25,
+		CamMoveSpeed: moveSpeed,
+
+		DrawVerts:  true,
+		DrawWire:   true,
+		RenderWire: true,
+		RenderFace: true,
 	}
 
 	// Calc max frame time
@@ -97,13 +106,13 @@ func DefaultView() *View {
 }
 
 // Add actors to the scene
-func (v *View) RegisterActor(t actors.Triangle) {
-	v.Actors = append(v.Actors, t)
+func (v *View) RegisterTriangle(t actors.Triangle) {
+	v.Triangles = append(v.Triangles, t)
 }
 
 func (v *View) RegisterObject(o actors.Object) {
 	for _, tri := range o.Tris {
-		v.RegisterActor(tri)
+		v.RegisterTriangle(tri)
 	}
 }
 
@@ -165,11 +174,14 @@ func (v *View) CalcProjectionConstants() {
 // Add results to the framebuffer (verts & lines)
 func (v *View) PrepBuffer() {
 
-	for _, a := range v.Actors {
+	for _, a := range v.Triangles {
 		parent := a.ObjRef
 
-		//Save raster verts for connecting with lines after vertex pass
+		//Save raster verts for connecting with lines & filling face after vertex pass
 		var rasterVerts [][]uint16
+
+		// Save lines drawn for filling in faces
+		var rasterLines [][]uint16
 
 		// Calculate vertecies
 		for _, vert := range a.Verts() {
@@ -212,47 +224,112 @@ func (v *View) PrepBuffer() {
 			rasterVerts = append(rasterVerts, []uint16{xVert, yVert})
 
 			// Load vertecies to buffer
-			v.TouchBuffer(Blue, xVert, yVert)
+			if v.DrawVerts {
+				v.TouchBuffer(Red, xVert, yVert)
+			}
 
 		}
 
 		// Draw lines between 2D verts with bresenhams alg
-		if len(rasterVerts) > 1 {
+		if v.RenderWire {
 
-			// Keep track of connected points
-			connected := make(map[int]map[int]bool)
+			if len(rasterVerts) > 1 {
 
-			// Iterate through each vertex, connecting with neighbors and skipping if the reverse has been done
-			for i := range len(rasterVerts) {
-				for j := range len(rasterVerts) {
-					if i != j {
-						// Is i in connected
-						if c1, ok := connected[i]; ok {
-							// Is j in connected[i]
-							if _, ok := c1[j]; !ok {
-								v.DrawLine(rasterVerts[i], rasterVerts[j])
+				// Keep track of connected points
+				connected := make(map[int]map[int]bool)
+
+				// Iterate through each vertex, connecting with neighbors and skipping if the reverse has been done
+				for i := range len(rasterVerts) {
+					for j := range len(rasterVerts) {
+						if i != j {
+							// Is i in connected
+							if c1, ok := connected[i]; ok {
+								// Is j in connected[i]
+								if _, ok := c1[j]; !ok {
+									drawn := v.DrawLine(rasterVerts[i], rasterVerts[j])
+									rasterLines = append(rasterLines, drawn...)
+									// Record
+									// If j in connected
+									if _, ok := connected[j]; !ok {
+										connected[j] = make(map[int]bool)
+									}
+									connected[j][i] = true
+								}
+							} else {
+								drawn := v.DrawLine(rasterVerts[i], rasterVerts[j])
+								rasterLines = append(rasterLines, drawn...)
 								// Record
 								// If j in connected
 								if _, ok := connected[j]; !ok {
 									connected[j] = make(map[int]bool)
+
 								}
 								connected[j][i] = true
 							}
-						} else {
-							v.DrawLine(rasterVerts[i], rasterVerts[j])
-							// Record
-							// If j in connected
-							if _, ok := connected[j]; !ok {
-								connected[j] = make(map[int]bool)
-
-							}
-							connected[j][i] = true
 						}
+
 					}
 
 				}
+			}
+		}
+
+		// Fill in faces via scanlines
+		if v.RenderFace {
+			// Calculate the min/max X and Y in triangle verts for bounding box
+
+			var minX, maxX, minY, maxY uint16
+
+			for _, v := range rasterVerts {
+
+				// Handle X
+				if v[0] < minX {
+					minX = v[0]
+				} else if v[0] > maxX {
+					maxX = v[0]
+				}
+				// Handle y
+				if v[1] < minY {
+					minY = v[1]
+				} else if v[1] > maxY {
+					maxY = v[1]
+				}
+			}
+
+			// Reshape lines slice to be more useful here
+
+			linePoints := make(map[uint16][]uint16)
+
+			// Map what x coordinates have been drawn with a given Y
+			for _, v := range rasterLines {
+				x := v[0]
+				y := v[1]
+
+				linePoints[y] = append(linePoints[y], x)
+			}
+
+			// Offsets for skipping pixels if wireframe is drawn
+			var lineOffsetLeft, lineOffsetRight uint16
+			lineOffsetRight = 1
+			if v.DrawWire {
+				lineOffsetLeft = 1
+				lineOffsetRight = 0
+			}
+			// Within the bounding box, find the left and right raster bounds of triangle based on drawn lines
+			for y := minY; y < maxY; y++ {
+				if len(linePoints[y]) > 1 {
+
+					leftBound := slices.Min(linePoints[y])
+					rightBound := slices.Max(linePoints[y])
+
+					// Draw in the pixels inbetween these
+					for x := leftBound + lineOffsetLeft; x < rightBound+lineOffsetRight; x++ {
+						v.TouchBuffer(Green, x, y)
+					}
+				}
 
 			}
+
 		}
 
 	}
@@ -260,7 +337,7 @@ func (v *View) PrepBuffer() {
 }
 
 // Adds contiguous line to framebuffer between 2 points w/ Bresenhams alg
-func (v *View) DrawLine(start []uint16, end []uint16) {
+func (v *View) DrawLine(start []uint16, end []uint16) [][]uint16 {
 
 	startX := start[0]
 	startY := start[1]
@@ -268,12 +345,17 @@ func (v *View) DrawLine(start []uint16, end []uint16) {
 	endX := end[0]
 	endY := end[1]
 
+	// Will skip vertex pixel if drawing verts is enabled
+	var vertSkip uint16 = 0
+	if v.DrawVerts {
+		vertSkip = 1
+	}
 	// Pixels that will be drawn to buffer after calculations
 	var pixels [][]uint16
 
 	// Case of verical line
 	if startX == endX {
-		yMin := min(startY, endY) + 1
+		yMin := min(startY, endY) + vertSkip
 		yMax := max(startY, endY)
 
 		// Save pixels to draw along vertical line
@@ -282,7 +364,7 @@ func (v *View) DrawLine(start []uint16, end []uint16) {
 		}
 	} else if startY == endY {
 		// Case of flat line
-		xMin := min(startX, endX) + 1
+		xMin := min(startX, endX) + vertSkip
 		xMax := max(startX, endX)
 
 		// Save pixels to draw along horizontal line
@@ -303,7 +385,7 @@ func (v *View) DrawLine(start []uint16, end []uint16) {
 			c := 1 / m
 
 			// Skip first pixel as vertex will be drawn there
-			yMin := min(startY, endY) + 1
+			yMin := min(startY, endY) + vertSkip
 			yMax := max(startY, endY)
 
 			for y := yMin; y < yMax; y++ {
@@ -327,9 +409,14 @@ func (v *View) DrawLine(start []uint16, end []uint16) {
 
 	}
 	// Load all the pixels to framebuffer from whichever line alg was used
-	for _, p := range pixels {
-		v.TouchBuffer(Cyan, p[0], p[1])
+	if v.DrawWire {
+
+		for _, p := range pixels {
+			v.TouchBuffer(Cyan, p[0], p[1])
+		}
 	}
+
+	return pixels
 
 }
 

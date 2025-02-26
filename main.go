@@ -34,7 +34,7 @@ func main() {
 	go input.ManageKeys()
 
 	// Actual program
-	view := display.DefaultView()
+	view := display.CreateView(256, 224, 60, .1)
 
 	panda := actors.CreateObject(utils.ParseObj("./panda.obj"), 0, 0, 10, .1)
 	view.RegisterObject(*panda)
