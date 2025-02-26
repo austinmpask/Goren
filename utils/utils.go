@@ -35,6 +35,16 @@ func InitFrameBuffer(x uint16, y uint16) [][]string {
 
 }
 
+func InitDepthBuffer(x uint16, y uint16) [][]float64 {
+
+	buffer := make([][]float64, y)
+	for i := range buffer {
+		buffer[i] = make([]float64, x)
+	}
+	return buffer
+
+}
+
 // Apply x rotation matrix
 func RotateXTransform(vec []float64, rot []float64) []float64 {
 	x := vec[0]

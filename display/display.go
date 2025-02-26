@@ -10,15 +10,17 @@ import (
 	"time"
 )
 
-var Reset = "\033[0m"
-var Red = "\033[31m"
-var Green = "\033[32m"
-var Yellow = "\033[33m"
-var Blue = "\033[34m"
-var Magenta = "\033[35m"
-var Cyan = "\033[36m"
-var Gray = "\033[37m"
-var White = "\033[97m"
+var ColorMap = map[string]string{
+	"reset":   "\033[0m",
+	"red":     "\033[31m",
+	"green":   "\033[32m",
+	"yellow":  "\033[33m",
+	"blue":    "\033[34m",
+	"magenta": "\033[35m",
+	"cyan":    "\033[36m",
+	"gray":    "\033[37m",
+	"white":   "\033[97m",
+}
 
 // Monochrome colorspace
 var pixel = map[uint8]string{
@@ -32,6 +34,7 @@ type View struct {
 	Ypx         uint16
 	TargetFPS   uint8
 	FrameBuffer [][]string
+	DepthBuffer [][]float64
 
 	Fov      uint8
 	NearClip float64
@@ -79,8 +82,8 @@ func CreateView(w uint16, h uint16, fps uint8, moveSpeed float64) *View {
 		FarClip:      -150,
 		CamMoveSpeed: moveSpeed,
 
-		DrawVerts:  true,
-		DrawWire:   true,
+		DrawVerts:  false,
+		DrawWire:   false,
 		RenderWire: true,
 		RenderFace: true,
 	}
@@ -88,8 +91,9 @@ func CreateView(w uint16, h uint16, fps uint8, moveSpeed float64) *View {
 	// Calc max frame time
 	v.MaxFrameTime = v.CalcMaxFrameTime()
 
-	// Initialize buffer
+	// Initialize buffers
 	v.FrameBuffer = utils.InitFrameBuffer(v.Xpx, v.Ypx)
+	v.DepthBuffer = utils.InitDepthBuffer(v.Xpx, v.Ypx)
 
 	// Calculate projection constants
 	v.CalcProjectionConstants()
@@ -128,11 +132,16 @@ func (v *View) Aspect() float64 {
 	return float64(v.Xpx) / float64(v.Ypx)
 }
 
-// Set the FrameBuffer to empty pixels
+// Set the FrameBuffer to empty pixels and depth buffer to max depth
 func (v *View) ClearBuffer() {
 	for i := range v.FrameBuffer {
 		for j := range v.FrameBuffer[i] {
 			v.FrameBuffer[i][j] = pixel[0]
+		}
+	}
+	for i := range v.DepthBuffer {
+		for j := range v.DepthBuffer[i] {
+			v.DepthBuffer[i][j] = math.MaxFloat32
 		}
 	}
 	utils.ClearScreen()
@@ -183,6 +192,9 @@ func (v *View) PrepBuffer() {
 		// Save lines drawn for filling in faces
 		var rasterLines [][]uint16
 
+		// Store depth values for an approximated zbuffer
+		var depthVals []float64
+
 		// Calculate vertecies
 		for _, vert := range a.Verts() {
 
@@ -195,6 +207,7 @@ func (v *View) PrepBuffer() {
 			clipVert := utils.ApplyProjectionMatrix(camSpaceVert, v.XProjConst, v.YProjConst, v.ZProjConst, v.WProjConst)
 
 			// Discard if W out of bounds
+			depthVals = append(depthVals, clipVert[3])
 
 			if clipVert[3] > math.Abs(v.FarClip) || clipVert[3] < math.Abs(v.NearClip) {
 				continue
@@ -225,7 +238,7 @@ func (v *View) PrepBuffer() {
 
 			// Load vertecies to buffer
 			if v.DrawVerts {
-				v.TouchBuffer(Red, xVert, yVert)
+				v.TouchBuffer(ColorMap["red"], xVert, yVert)
 			}
 
 		}
@@ -272,6 +285,13 @@ func (v *View) PrepBuffer() {
 		// Fill in faces via scanlines
 		if v.RenderFace {
 			// Calculate the min/max X and Y in triangle verts for bounding box
+
+			// Calculate average depth for the face
+			var depth float64
+			for _, w := range depthVals {
+				depth += w
+			}
+			depth = depth / float64(len(depthVals))
 
 			var maxX, maxY uint16
 			var minX, minY uint16 = math.MaxUint16, math.MaxUint16
@@ -324,7 +344,12 @@ func (v *View) PrepBuffer() {
 
 					// Draw in the pixels inbetween these
 					for x := leftBound + lineOffsetLeft; x < rightBound+lineOffsetRight; x++ {
-						v.TouchBuffer(Green, x, y)
+
+						// Only draw if the pixel is infront of other faces, based on average face depth
+						if v.DepthBuffer[y][x] > depth {
+							v.TouchBuffer(ColorMap[parent.Color], x, y)
+							v.DepthBuffer[y][x] = depth
+						}
 					}
 				}
 
@@ -412,7 +437,7 @@ func (v *View) DrawLine(start []uint16, end []uint16) [][]uint16 {
 	if v.DrawWire {
 
 		for _, p := range pixels {
-			v.TouchBuffer(Cyan, p[0], p[1])
+			v.TouchBuffer(ColorMap["cyan"], p[0], p[1])
 		}
 	}
 

@@ -1,16 +1,17 @@
 package actors
 
 type Object struct {
-	Tris []Triangle
-	ObjX float64
-	ObjY float64
-	ObjZ float64
-	Rot  []float64
+	Tris  []Triangle
+	ObjX  float64
+	ObjY  float64
+	ObjZ  float64
+	Rot   []float64
+	Color string
 
 	Scale float64
 }
 
-func CreateObject(triangles [][][]float64, objX float64, objY float64, objZ float64, scale float64) *Object {
+func CreateObject(triangles [][][]float64, objX float64, objY float64, objZ float64, scale float64, color string) *Object {
 
 	o := Object{
 		Tris:  []Triangle{},
@@ -19,6 +20,7 @@ func CreateObject(triangles [][][]float64, objX float64, objY float64, objZ floa
 		ObjY:  -objY,
 		ObjZ:  objZ,
 		Rot:   []float64{0, 0, 0},
+		Color: color,
 	}
 	// Make triangles out of the coordinates
 	for _, t := range triangles {
