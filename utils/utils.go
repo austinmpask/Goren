@@ -6,6 +6,13 @@ import (
 	"time"
 )
 
+// Some debug options
+var Debug = true
+var DrawVerts = false
+var DrawWire = false
+var RenderFace = true
+var RenderLighting = true
+
 // Clear terminal window
 func ClearScreen() {
 	fmt.Print("\033[H\033[2J")

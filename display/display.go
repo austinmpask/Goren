@@ -39,12 +39,8 @@ type View struct {
 	CamZ   float64
 	CamRot []float64
 
-	DrawVerts      bool
-	DrawWire       bool
-	RenderWire     bool
-	RenderFace     bool
-	RenderLighting bool
-	OverlayOrigin  []uint16
+	RenderWire    bool
+	OverlayOrigin []uint16
 
 	CamMoveSpeed float64
 
@@ -53,7 +49,6 @@ type View struct {
 	FrameEnd   time.Duration
 
 	MaxFrameTime time.Duration
-	Debug        bool
 	FrameCount   uint64
 	PrevFt       float64
 
@@ -62,7 +57,7 @@ type View struct {
 	PointLights []*actors.PointLight
 }
 
-func CreateView(w uint16, h uint16, fps uint8, moveSpeed float64, debug bool) *View {
+func CreateView(w uint16, h uint16, fps uint8, moveSpeed float64) *View {
 
 	v := View{
 		Xpx:          w,
@@ -77,12 +72,7 @@ func CreateView(w uint16, h uint16, fps uint8, moveSpeed float64, debug bool) *V
 		FarClip:      -50,
 		CamMoveSpeed: moveSpeed,
 
-		DrawVerts:      false,
-		DrawWire:       false,
-		RenderWire:     true,
-		RenderFace:     true,
-		RenderLighting: true,
-		Debug:          debug,
+		RenderWire: true,
 	}
 
 	// Calc max frame time
@@ -98,7 +88,7 @@ func CreateView(w uint16, h uint16, fps uint8, moveSpeed float64, debug bool) *V
 	v.CalcProjectionConstants()
 
 	// Initialize screen border
-	v.Xborder = "\033[0m" + strings.Repeat(pixel[1], int(v.Xpx)+2)
+	v.Xborder = utils.ColorMap["Blue"][4] + strings.Repeat(pixel[1], int(v.Xpx)+2) + "\033[0m\n"
 
 	// Remove cursor
 	fmt.Print("\033[?25l")
@@ -137,7 +127,7 @@ func (v *View) Aspect() float64 {
 func (v *View) ClearBuffer() {
 	for i := range v.FrameBuffer {
 		for j := range v.FrameBuffer[i] {
-			v.FrameBuffer[i][j] = "  "
+			v.FrameBuffer[i][j] = pixel[0]
 		}
 	}
 	for i := range v.DepthBuffer {
@@ -237,7 +227,7 @@ triangleLoop:
 
 		}
 		// Load vertecies to buffer
-		if v.DrawVerts {
+		if utils.DrawVerts {
 			go func() {
 				for _, vertex := range rasterVerts {
 
@@ -284,7 +274,7 @@ triangleLoop:
 		}
 
 		// Fill in faces via scanlines
-		if v.RenderFace {
+		if utils.RenderFace {
 
 			// Calculate average depth for the face
 			var depth float64
@@ -332,7 +322,7 @@ triangleLoop:
 			// Offsets for skipping pixels if wireframe is drawn
 			var lineOffsetLeft, lineOffsetRight uint16
 			lineOffsetRight = 1
-			if v.DrawWire {
+			if utils.DrawWire {
 				lineOffsetLeft = 1
 				lineOffsetRight = 0
 			}
@@ -378,7 +368,7 @@ triangleLoop:
 	}
 
 	// Draw debug stats on the screen in big text
-	if v.Debug {
+	if utils.Debug {
 		v.FrameCount++
 		v.DrawDebug()
 	}
@@ -389,7 +379,7 @@ triangleLoop:
 func (v *View) CalculateFaceColor(depth float64, center []float64, falloff float64) int {
 	var baseIntensity = 1
 
-	if v.RenderLighting {
+	if utils.RenderLighting {
 		// 1 is the minimum luminance for a given color
 
 		// Apply scene lighting
@@ -443,7 +433,7 @@ func (v *View) DrawLine(start []uint16, end []uint16) [][]uint16 {
 
 	// Will skip vertex pixel if drawing verts is enabled
 	var vertSkip uint16 = 0
-	if v.DrawVerts {
+	if utils.DrawVerts {
 		vertSkip = 1
 	}
 	// Pixels that will be drawn to buffer after calculations
@@ -505,7 +495,7 @@ func (v *View) DrawLine(start []uint16, end []uint16) [][]uint16 {
 
 	}
 	// Load all the pixels to framebuffer from whichever line alg was used
-	if v.DrawWire {
+	if utils.DrawWire {
 
 		for _, p := range pixels {
 			v.FrameBuffer[p[1]][p[0]] = utils.ColorMap["Cyan"][5]
@@ -516,6 +506,7 @@ func (v *View) DrawLine(start []uint16, end []uint16) [][]uint16 {
 
 }
 
+// Camera rotation + transalation relative to normal
 func (v *View) HandleInput() {
 	switch input.Key {
 	case "w":
@@ -547,7 +538,6 @@ func (v *View) DrawBuffer() {
 	var sb strings.Builder
 
 	sb.WriteString(v.Xborder)
-	sb.WriteByte('\n')
 	for _, row := range v.FrameBuffer {
 		for _, pxl := range row {
 			sb.WriteString(pxl)
@@ -555,7 +545,6 @@ func (v *View) DrawBuffer() {
 		sb.WriteByte('\n')
 	}
 	sb.WriteString(v.Xborder)
-	sb.WriteByte('\n')
 
 	s := sb.String()
 	fmt.Print(s)
