@@ -1,10 +1,11 @@
 package utils
 
+// Escape codes for colored pixel + luminance
+
+// Dark = 1, Light = 10
 var ColorMap = map[string]map[int]string{
-	// Reset is special - no intensity level
 	"Reset": {0: "\033[0m"},
 
-	// Colors with intensity levels 1-10
 	"Red": {
 		1:  "\033[38;5;52m██", // Dark red
 		2:  "\033[38;5;88m██",
@@ -87,9 +88,8 @@ var ColorMap = map[string]map[int]string{
 		7:  "\033[38;5;253m██",
 		8:  "\033[38;5;254m██",
 		9:  "\033[38;5;255m██",
-		10: "\033[38;5;231m██", // Almost white
+		10: "\033[38;5;231m██", // Light gray
 	},
-	// White has only one shade, but included for consistency
 	"White": {
 		1:  "\033[38;5;231m██",
 		2:  "\033[38;5;231m██",

@@ -81,8 +81,7 @@ func CreateView(w uint16, h uint16, fps uint8, moveSpeed float64) *View {
 	// Origin for drawing big text
 	v.OverlayOrigin = []uint16{5, 5}
 	// Initialize buffers
-	v.FrameBuffer = utils.InitFrameBuffer(v.Xpx, v.Ypx)
-	v.DepthBuffer = utils.InitDepthBuffer(v.Xpx, v.Ypx)
+	v.FrameBuffer, v.DepthBuffer = utils.CreateBuffers(v.Xpx, v.Ypx)
 
 	// Calculate projection constants
 	v.CalcProjectionConstants()

@@ -9,6 +9,7 @@ import (
 
 // Parse .obj file to convert to Object actor which is made up of Triangles
 func ParseObj(path string) [][][]float64 {
+	// Open file
 	file, err := os.Open(path)
 	if err != nil {
 		return nil
@@ -21,10 +22,12 @@ func ParseObj(path string) [][][]float64 {
 
 	scanner := bufio.NewScanner(file)
 
+	// Check each line, adda vertex if appropriate or add a triangle
 	for scanner.Scan() {
 		line := scanner.Text()
 		fields := strings.Fields(line)
 
+		// Skip blanks
 		if len(fields) == 0 {
 			continue
 		}
@@ -54,12 +57,11 @@ func ParseObj(path string) [][][]float64 {
 		// Face lines
 		if fields[0] == "f" {
 
-			// Universal for 3 verts or face has more than 3 and need to break down into triangles
+			// Works for 3-n verts, will subdivide face into triangles
 			if len(fields) >= 4 {
 				// Collect all verts
 				vs := []int{}
 				for i := 1; i < len(fields); i++ {
-
 					vertexStr := strings.Split(fields[i], "/")[0]
 					vertexInt, _ := strconv.Atoi(vertexStr)
 					vertexInt-- //0 index
