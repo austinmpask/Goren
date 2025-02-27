@@ -3,6 +3,7 @@ package display
 import (
 	"fmt"
 	"go3d/actors"
+	"go3d/input"
 	"go3d/utils"
 	"math"
 	"slices"
@@ -124,8 +125,7 @@ func (v *View) RegisterPointLight(l *actors.PointLight) {
 // Calculate the maximum allowable frametime to maintain the target framerate in MS
 func (v *View) CalcMaxFrameTime() time.Duration {
 
-	fps := time.Duration(v.TargetFPS)
-	return time.Second / fps
+	return time.Duration(float64(time.Second) / float64(v.TargetFPS))
 }
 
 // TODO precompute this
@@ -516,6 +516,31 @@ func (v *View) DrawLine(start []uint16, end []uint16) [][]uint16 {
 
 }
 
+func (v *View) HandleInput() {
+	switch input.Key {
+	case "w":
+		v.MoveCam(math.Cos(utils.DegToRad(90-v.CamRot[1]))*v.CamMoveSpeed, 0, math.Sin(utils.DegToRad(90-v.CamRot[1]))*-v.CamMoveSpeed)
+	case "s":
+		v.MoveCam(math.Cos(utils.DegToRad(90-v.CamRot[1]))*-v.CamMoveSpeed, 0, math.Sin(utils.DegToRad(90-v.CamRot[1]))*v.CamMoveSpeed)
+	case "d":
+		v.MoveCam(math.Cos(utils.DegToRad(-v.CamRot[1]))*v.CamMoveSpeed, 0, math.Sin(utils.DegToRad(-v.CamRot[1]))*-v.CamMoveSpeed)
+	case "a":
+		v.MoveCam(math.Cos(utils.DegToRad(-v.CamRot[1]))*-v.CamMoveSpeed, 0, math.Sin(utils.DegToRad(-v.CamRot[1]))*v.CamMoveSpeed)
+	case " ":
+		v.MoveCam(0, v.CamMoveSpeed, 0)
+	case "z":
+		v.MoveCam(0, -v.CamMoveSpeed, 0)
+	case "i":
+		v.RotateCam(-5*v.CamMoveSpeed, 0, 0)
+	case "k":
+		v.RotateCam(5*v.CamMoveSpeed, 0, 0)
+	case "l":
+		v.RotateCam(0, 10*v.CamMoveSpeed, 0)
+	case "j":
+		v.RotateCam(0, -10*v.CamMoveSpeed, 0)
+	}
+}
+
 // Prints buffer contents to screen
 func (v *View) DrawBuffer() {
 
@@ -637,23 +662,30 @@ func (v *View) StartFrame() {
 }
 
 // Log the time once the buffer and anything else was drawn to screen
-func (v *View) EndFrame(ft chan time.Duration) {
-	t := time.Since(v.FrameStart)
-	ft <- t
-	v.FrameTime = t
+func (v *View) EndFrame() {
+
+	v.FrameTime = time.Since(v.FrameStart)
 }
 
 // Minimize screen tearing by waiting until frametime for the target framerate has elapsed before continuing
-func (v *View) FrameSync(end time.Duration, adj int) {
-	frameTimeSlack := v.MaxFrameTime - end
+func (v *View) FrameSync(method string, adj int) {
+
+	// Calc remaining time for frame
+	frameTimeSlack := v.MaxFrameTime - v.FrameTime
 
 	targetTime := time.Now().Add(frameTimeSlack).Add(time.Duration(adj) * time.Microsecond)
 
-	// Use for loop instead, more accurate scheduling than sleep. Sleep introduces significant drift at high refresh rates
-	for time.Now().Before(targetTime) {
-		//Wait
-	}
+	switch method {
+	// Primary frame sync method, introduces some drift
+	case "sleep":
+		time.Sleep(time.Until(targetTime))
+	// Alternate method, more accurate framerates but high cpu
+	case "loop":
+		for time.Now().Before(targetTime) {
+			//Wait
+		}
 
+	}
 	// Log the time that the entire frame ended
 	v.FrameEnd = time.Since(v.FrameStart)
 }
