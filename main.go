@@ -17,12 +17,18 @@ func main() {
 	miniRat := actors.CreateObject(utils.ParseObj("./rat.obj"), -5, 3, 23, .1, "Red")
 
 	// Create scene lighting
-	light := actors.CreatePointLight(0, 10, -10, .7, 25)
+	light := &actors.Light{
+		LightX:    0,
+		LightY:    10,
+		LightZ:    -10,
+		Intensity: .7,
+		Falloff:   25,
+	}
 
 	// Register within the scene
-	scene.RegisterObject(*bigRat)
-	scene.RegisterObject(*miniRat)
-	scene.RegisterPointLight(light)
+	scene.RegisterObject(bigRat)
+	scene.RegisterObject(miniRat)
+	scene.RegisterLight(light)
 
 	// Listen to keyboard input
 	input.ListenKeys()
@@ -35,6 +41,7 @@ func main() {
 
 		// Scene logic
 		bigRat.Rotate(0, 1, 0)
+		light.Translate(.1, 0, 0)
 		// End Scene logic
 
 		scene.HandleInput()

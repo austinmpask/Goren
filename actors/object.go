@@ -11,6 +11,7 @@ type Object struct {
 	Scale float64
 }
 
+// Constructor that associates triangles with the object
 func CreateObject(triangles [][][]float64, objX float64, objY float64, objZ float64, scale float64, color string) *Object {
 
 	o := Object{
