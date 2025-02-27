@@ -54,6 +54,7 @@ func main() {
 
 		view.StartFrame()
 		view.ClearBuffer()
+		utils.ClearScreen()
 		// panda.Translate(0, 0, .1)
 
 		panda.Rotate(0, 1, 0)

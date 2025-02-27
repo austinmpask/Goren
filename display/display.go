@@ -97,7 +97,7 @@ func CreateView(w uint16, h uint16, fps uint8, moveSpeed float64, debug bool) *V
 	v.CalcProjectionConstants()
 
 	// Initialize screen border
-	v.Xborder = strings.Repeat(pixel[1], int(v.Xpx)+2)
+	v.Xborder = "\033[0m" + strings.Repeat(pixel[1], int(v.Xpx)+2)
 
 	// Remove cursor
 	fmt.Print("\033[?25l")
@@ -137,7 +137,7 @@ func (v *View) Aspect() float64 {
 func (v *View) ClearBuffer() {
 	for i := range v.FrameBuffer {
 		for j := range v.FrameBuffer[i] {
-			v.FrameBuffer[i][j] = pixel[0]
+			v.FrameBuffer[i][j] = "  "
 		}
 	}
 	for i := range v.DepthBuffer {
@@ -145,7 +145,6 @@ func (v *View) ClearBuffer() {
 			v.DepthBuffer[i][j] = math.MaxFloat32
 		}
 	}
-	utils.ClearScreen()
 
 }
 
@@ -184,122 +183,117 @@ func (v *View) CalcProjectionConstants() {
 // Add results to the framebuffer (verts & lines)
 func (v *View) PrepBuffer() {
 
+	// Precompute clip
+
+triangleLoop:
 	for _, a := range v.Triangles {
+		// Save parent for color assignment
 		parent := a.ObjRef
 
 		//Save raster verts for connecting with lines & filling face after vertex pass
-		var rasterVerts [][]uint16
-
 		// Save lines drawn for filling in faces
-		var rasterLines [][]uint16
+		var rasterVerts, rasterLines [][]uint16
 
 		// Store depth values for an approximated zbuffer
-		var depthVals []float64
-
 		// Store worldspace verts for lighting calculations
+		var depthVals []float64
 		var worldVerts [][]float64
-
 		// Calculate vertecies
-		for _, vert := range a.Verts() {
+		for _, vert := range a.Verts {
 
 			// Convert to worldspace
-			worldVert := utils.ApplyWorldMatrix(vert, parent.ObjX, parent.ObjY, parent.ObjZ, parent.Scale, parent.Rot)
+			vert = utils.ApplyWorldMatrix(vert, parent.ObjX, parent.ObjY, parent.ObjZ, parent.Scale, parent.Rot)
 
 			// Store world verts for lighting calculations
-			worldVerts = append(worldVerts, worldVert)
+			worldVerts = append(worldVerts, vert)
 
-			camSpaceVert := utils.ApplyCamMatrix(v.CamX, v.CamY, v.CamZ, v.CamRot, worldVert[0], worldVert[1], worldVert[2])
+			vert = utils.ApplyCamMatrix(v.CamX, v.CamY, v.CamZ, v.CamRot, vert[0], vert[1], vert[2])
+			vert = utils.ApplyProjectionMatrix(vert, v.XProjConst, v.YProjConst, v.ZProjConst, v.WProjConst)
 
-			// fmt.Printf("Camspace Vert: %v\n", camSpaceVert)
-			clipVert := utils.ApplyProjectionMatrix(camSpaceVert, v.XProjConst, v.YProjConst, v.ZProjConst, v.WProjConst)
-
-			// Discard if W out of bounds
-			depthVals = append(depthVals, clipVert[3])
-
-			if clipVert[3] > math.Abs(v.FarClip) || clipVert[3] < math.Abs(v.NearClip) {
-				continue
+			// Prevent behind cam objects from drawing
+			if vert[3] > math.Abs(v.FarClip) || vert[3] < math.Abs(v.NearClip) {
+				continue triangleLoop
 			}
-			// fmt.Printf("Clip Vert: %v\n", clipVert)
-			ndcVert := utils.ApplyNdcMatrix(clipVert)
+			// Save depth vals for face rendering
+			depthVals = append(depthVals, vert[3])
+
+			vert = utils.ApplyNdcMatrix(vert)
 			// Discard if out of bounds
-			ooB := false
-			for _, v := range ndcVert {
+			for _, v := range vert {
 				if v > 1 || v < -1 {
-					ooB = true
-					break
+					continue triangleLoop
 				}
 
 			}
-			if ooB {
-				continue
-			}
-			// fmt.Printf("NDC Vert: %v\n", ndcVert)
-			ssVert := utils.NdcToScreen(ndcVert, v.Xpx, v.Ypx)
+
+			vert = utils.NdcToScreen(vert, v.Xpx, v.Ypx)
 			// fmt.Printf("Screenspace Vert: %v\n", ssVert)
 
-			xVert := uint16(math.Round(ssVert[0]))
-			yVert := uint16(math.Round(ssVert[1]))
+			xVert := uint16(math.Round(vert[0]))
+			yVert := uint16(math.Round(vert[1]))
 
 			// Save final 2D vertex for drawing lines
 			rasterVerts = append(rasterVerts, []uint16{xVert, yVert})
 
-			// Load vertecies to buffer
-			if v.DrawVerts {
-				v.TouchBuffer(utils.ColorMap["Red5"], xVert, yVert)
-			}
+		}
+		// Load vertecies to buffer
+		if v.DrawVerts {
+			go func() {
+				for _, vertex := range rasterVerts {
 
+					v.FrameBuffer[vertex[1]][vertex[0]] = utils.ColorMap["Red"][5]
+				}
+			}()
 		}
 
 		// Draw lines between 2D verts with bresenhams alg
 		if v.RenderWire {
 
-			if len(rasterVerts) > 1 {
+			// Keep track of connected points
+			connected := make(map[int]map[int]bool)
 
-				// Keep track of connected points
-				connected := make(map[int]map[int]bool)
+			// Iterate through each vertex, connecting with neighbors and skipping if the reverse has been done
+			for i := range len(rasterVerts) {
+				for j := range len(rasterVerts) {
+					if i != j {
 
-				// Iterate through each vertex, connecting with neighbors and skipping if the reverse has been done
-				for i := range len(rasterVerts) {
-					for j := range len(rasterVerts) {
-						if i != j {
+						// Check if i has been connected to anything
+						if _, ok := connected[i]; ok {
 
-							// Check if i has been connected to anything
-							if _, ok := connected[i]; ok {
-
-								// Check if i has been connected to j, then skip
-								if _, ok := connected[i][j]; ok {
-									continue
-								}
+							// Check if i has been connected to j, then skip
+							if _, ok := connected[i][j]; ok {
+								continue
 							}
-
-							drawn := v.DrawLine(rasterVerts[i], rasterVerts[j])
-							rasterLines = append(rasterLines, drawn...)
-
-							// Record the edge as drawn
-							if _, ok := connected[i]; !ok {
-								connected[i] = make(map[int]bool)
-							}
-							connected[i][j] = true
-
 						}
+
+						drawn := v.DrawLine(rasterVerts[i], rasterVerts[j])
+						rasterLines = append(rasterLines, drawn...)
+
+						// Record the edge as drawn
+						if _, ok := connected[i]; !ok {
+							connected[i] = make(map[int]bool)
+						}
+						connected[i][j] = true
 
 					}
 
 				}
+
 			}
+
 		}
 
 		// Fill in faces via scanlines
 		if v.RenderFace {
-			// Calculate the min/max X and Y in triangle verts for bounding box
 
 			// Calculate average depth for the face
 			var depth float64
 			for _, w := range depthVals {
 				depth += w
 			}
-			depth = depth / float64(len(depthVals))
+			depth /= float64(len(depthVals))
 
+			// Calculate the min/max X and Y in triangle verts for bounding box
 			var maxX, maxY uint16
 			var minX, minY uint16 = math.MaxUint16, math.MaxUint16
 
@@ -356,6 +350,9 @@ func (v *View) PrepBuffer() {
 			zC /= float64(len(worldVerts))
 			center := []float64{xC, yC, zC}
 
+			// Calculate face color based on lighting and camera depth
+			lum := v.CalculateFaceColor(depth, center, .3)
+
 			// Within the bounding box, find the left and right raster bounds of triangle based on drawn lines
 			for y := minY; y < maxY; y++ {
 				if len(linePoints[y]) > 1 {
@@ -365,11 +362,10 @@ func (v *View) PrepBuffer() {
 
 					// Draw in the pixels inbetween these
 					for x := leftBound + lineOffsetLeft; x < rightBound+lineOffsetRight; x++ {
-
 						// Only draw if the pixel is infront of other faces, based on average face depth
 						if v.DepthBuffer[y][x] > depth {
 
-							v.TouchBuffer(utils.ColorMap[v.CalculateFaceColor(parent.Color, depth, center, .3)], x, y)
+							v.FrameBuffer[y][x] = utils.ColorMap[parent.Color][lum]
 							v.DepthBuffer[y][x] = depth
 						}
 					}
@@ -390,12 +386,11 @@ func (v *View) PrepBuffer() {
 }
 
 // Returns a value between 1-10 referring to a color shade based on scene lighting and camera depth
-func (v *View) CalculateFaceColor(baseColor string, depth float64, center []float64, falloff float64) string {
+func (v *View) CalculateFaceColor(depth float64, center []float64, falloff float64) int {
+	var baseIntensity = 1
 
 	if v.RenderLighting {
-
 		// 1 is the minimum luminance for a given color
-		var baseIntensity = 1
 
 		// Apply scene lighting
 		for _, light := range v.PointLights {
@@ -432,12 +427,8 @@ func (v *View) CalculateFaceColor(baseColor string, depth float64, center []floa
 		baseIntensity = min(baseIntensity, 10)
 		baseIntensity = max(baseIntensity, 1)
 
-		color := fmt.Sprintf("%s%v", baseColor, baseIntensity)
-
-		return color
 	}
-
-	return fmt.Sprintf("%s%v", baseColor, 5)
+	return baseIntensity
 
 }
 
@@ -517,7 +508,7 @@ func (v *View) DrawLine(start []uint16, end []uint16) [][]uint16 {
 	if v.DrawWire {
 
 		for _, p := range pixels {
-			v.TouchBuffer(utils.ColorMap["Cyan5"], p[0], p[1])
+			v.FrameBuffer[p[1]][p[0]] = utils.ColorMap["Cyan"][5]
 		}
 	}
 
@@ -527,12 +518,22 @@ func (v *View) DrawLine(start []uint16, end []uint16) [][]uint16 {
 
 // Prints buffer contents to screen
 func (v *View) DrawBuffer() {
-	fmt.Println(v.Xborder)
+
+	var sb strings.Builder
+
+	sb.WriteString(v.Xborder)
+	sb.WriteByte('\n')
 	for _, row := range v.FrameBuffer {
-		// Print with Y border added
-		fmt.Printf("%v%v%v\n", pixel[1], strings.Join(row, ""), pixel[1])
+		for _, pxl := range row {
+			sb.WriteString(pxl)
+		}
+		sb.WriteByte('\n')
 	}
-	fmt.Println(v.Xborder)
+	sb.WriteString(v.Xborder)
+	sb.WriteByte('\n')
+
+	s := sb.String()
+	fmt.Print(s)
 
 }
 
@@ -573,8 +574,9 @@ func (v *View) DrawDebug() {
 	}
 
 	// Print directly to buffer
-	c1 := "Red6"
-	c2 := "Cyan6"
+	c1 := "Red"
+	c2 := "Cyan"
+
 	v.DrawBigDebug(0, fmt.Sprintf("FT:      %.3fms", ftMs), c1)
 	v.DrawBigDebug(1, fmt.Sprintf("FT UTIL: %.3f%%", util), c1)
 	v.DrawBigDebug(2, fmt.Sprintf("P FPS:   %.3f", pfps), c1)
@@ -621,21 +623,11 @@ func (v *View) DrawBigDebug(line uint16, text string, color string) {
 
 				// If the pixel should be filled (value is 1), touch the buffer at that position
 				if bigChar[index] == 1 {
-					v.TouchBuffer(utils.ColorMap[color], pixelX, pixelY)
+					v.FrameBuffer[pixelY][pixelX] = utils.ColorMap[color][6]
 				}
 			}
 		}
 	}
-}
-
-// Safely populate a pixel in the buffer respecting xy bounds
-func (v *View) TouchBuffer(color string, x uint16, y uint16) {
-
-	if x < v.Xpx && y < v.Ypx {
-
-		v.FrameBuffer[y][x] = fmt.Sprintf("%s%s\033[0m", color, pixel[1])
-	}
-
 }
 
 // Log the time the frame calculations began
