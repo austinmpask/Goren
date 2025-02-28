@@ -49,6 +49,7 @@ func main() {
 		scene.ClearBuffer()
 
 		// Scene logic for demo
+
 		scene.MoveCam(0, -.05, -.05)
 		scene.RotateCam(-.05, -.13, 0)
 		car.Translate(0, 0, .15)
