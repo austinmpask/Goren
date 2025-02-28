@@ -1,9 +1,12 @@
-<h1 align="center">GOREN</h1>
+<div align="center">
+	<img src="img/logo.png" width=300 alt="GOREN">
+</div>
 <p align="center">
-Zero dependency terminal based 3D rendering engine written in pure Go.
+Zero dependency terminal based 3D rendering engine written in pure Go
 </p>
-<br>
-<img align="center" src="img/DemoScene.gif" alt="Demo Scene">
+<div align="center">
+	<img src="img/DemoScene.gif" alt="Demo Scene">
+</div>
 
 # Features
 
