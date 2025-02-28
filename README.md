@@ -1,6 +1,9 @@
-# Goren
-
+<h1 align="center">GOREN</h1>
+<p align="center">
 Zero dependency terminal based 3D rendering engine written in pure Go.
+</p>
+<br>
+<img align="center" src="img/DemoScene.gif" alt="Demo Scene">
 
 # Features
 
@@ -82,12 +85,12 @@ scene.RegisterObject(someObj)
 ```go
 // Create a light
 light := &actors.Light{
-		LightX:    float64,
-		LightY:    float64,
-		LightZ:    float64,
-		Intensity: float64,
-		Falloff:   float64,
-	}
+	LightX:    float64,
+	LightY:    float64,
+	LightZ:    float64,
+	Intensity: float64,
+	Falloff:   float64,
+}
 
 // Add the light to the scene
 scene.RegisterLight(light)
@@ -110,22 +113,22 @@ input.ListenKeys()
 
 ```go
 for {
-		scene.StartFrame()
-		scene.ClearBuffer()
-		scene.HandleInput()
+	scene.StartFrame()
+	scene.ClearBuffer()
+	scene.HandleInput()
 
-		// Your frame logic goes here:
+	// Your frame logic goes here:
 
-		someObj.Translate(0,1,0) //As an example
+	someObj.Translate(0,1,0) //As an example
 
-		// End frame logic
+	// End frame logic
 
-		scene.PrepBuffer()
-		scene.DrawBuffer()
-		scene.EndFrame()
-		scene.FrameSync(method string, adjustment int)
+	scene.PrepBuffer()
+	scene.DrawBuffer()
+	scene.EndFrame()
+	scene.FrameSync(method string, adjustment int)
 
-	}
+}
 ```
 
 - `StartFrame()`: Logs the time at which the frame started.
@@ -235,6 +238,42 @@ light.Falloff = falloff float64
 scene.MoveCam(dx float64, dy float64, dz float64) // Move camera
 scene.RotateCam(dx float64, dy float64, dz float64) // Rotate camera (Degree units)
 ```
+
+# Debugging Features
+
+### Wire Frame Toggle
+<img src="img/WireFrame.png" alt="Wireframe">
+
+### Vertex Toggle
+<img src="img/Vertex.png" alt="Vertex">
+
+### Lighting Toggle
+<img src="img/NoLight.png" alt="No Lighting">
+
+### Final Scene
+<img src="img/FinalScene.png" alt="Final Scene">
+
+### Stats Overlay
+<img src="img/Debugger.png" alt="Debugger" width=300>
+
+- **FT (Frametime)**
+  - Time elapsed from frame start to end of drawing buffer to screen
+- **FT UTIL (Frametime Utilization)**
+  - Percentage of frametime budget (derived from `targetFPS`) consumed by current computations
+- **P FPS (Potential FPS)**
+  - Frametime converted to framerate, the maximum framerate that could be achieved under current load
+- **RL FPS (Real FPS)**
+  - The actual output framerate of the render, after frame syncing
+- **POLYS (Polycount)**
+  - Total number of triangles in the `View` (All faces are triangulated)
+- **LIGHTS (Lightcount)**
+  - Total number of lights in the `View`
+- **FT AVG (Frametime Average)**
+  - Weighted average of frametime for the session, favoring newer frames
+- **FT UTIL AVG (Frametime Utilization Average)**
+  - Weighted average of frametime utilization for the session, favoring newer frames
+- **PT FPS AVG (Potential FPS Average)**
+  - Weighted average of potential framerate for the session, favoring newer frames
 
 # Keyboard Controls
 
