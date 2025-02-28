@@ -2,9 +2,7 @@
 
 Zero dependency terminal based 3D rendering engine written in pure Go.
 
-## [[#Features]]
-
----
+# Features
 
 - Zero dependencies. No OpenGL or other APIs, just pure Go, from scratch
 - Dynamic lighting from multiple light sources
@@ -20,9 +18,7 @@ Zero dependency terminal based 3D rendering engine written in pure Go.
 - Keyboard controls for camera translation and rotation
 - Advanced performance metrics in real time and with weighted averaging
 
-## [[#Getting Started]]
-
----
+# Getting Started
 
 ### Try the demo
 
@@ -240,7 +236,7 @@ scene.MoveCam(dx float64, dy float64, dz float64) // Move camera
 scene.RotateCam(dx float64, dy float64, dz float64) // Rotate camera (Degree units)
 ```
 
-## [[#Keyboard Controls]]
+# Keyboard Controls
 
 ---
 
@@ -271,9 +267,7 @@ scene.RotateCam(dx float64, dy float64, dz float64) // Rotate camera (Degree uni
 | 9   | Toggle face rendering     |
 | 0   | Toggle lighting rendering |
 
-## [[#Technical Details]]
-
----
+# Technical Details
 
 ### Order of Matrix Transformations:
 
@@ -301,9 +295,7 @@ I've overlayed estimate axis on this screenshot to illustrate the world origin. 
 
 <img src="img/WorldspaceAxis.jpeg" alt="Axis Reference">
 
-## Thanks for Reading!
-
----
+# Thanks for Reading!
 
 Please contact me regarding any job opportunities:
 austinmpask@outlook.com
