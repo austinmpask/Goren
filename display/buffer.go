@@ -31,16 +31,18 @@ func (v *View) DrawBuffer() {
 
 	var sb strings.Builder
 
-	sb.WriteString(v.Xborder)
+	// sb.WriteString(v.Xborder)
 	for _, row := range v.FrameBuffer {
 		for _, pxl := range row {
 			sb.WriteString(pxl)
 		}
-		sb.WriteByte('\n')
+		// sb.WriteByte('\n')
 	}
-	sb.WriteString(v.Xborder)
+	// sb.WriteString(v.Xborder)
 
 	s := sb.String()
+	// Reset cursor to top of window
+	fmt.Print("\033[H")
 	fmt.Print(s)
 
 }

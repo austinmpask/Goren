@@ -11,6 +11,6 @@ type Light struct {
 
 func (l *Light) Translate(dx float64, dy float64, dz float64) {
 	l.LightX += dx
-	l.LightY -= dy
+	l.LightY += dy
 	l.LightZ += dz
 }
