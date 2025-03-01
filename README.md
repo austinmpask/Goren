@@ -28,8 +28,8 @@ Zero dependency terminal based 3D rendering engine written in pure Go
 
 ### Try the demo
 
-1. Compatibility: **Linux, Windows (via WSL)**
-   - This is due to how window dimensions are read, which is crucial for frame synchronization. I aim to implement a cross platform solution when I have time, but at the moment this whole thing is a proof of concept / technical demo.
+1. Compatibility: **Linux, Windows (via WSL only)**
+   - This is due to how keyboard inputs are read. Mac and Windows (outside of WSL) are unsupported at this time. I aim to implement a cross platform solution when I have time, but at the moment this whole thing is a proof of concept / technical demo.
 2. Adjust your terminal
    1. Zoom way out or change your terminal font size for the best experience. A pixel in Goren is 2 characters wide. You may encounter issues if you attempt to run Goren without adequate screen real estate.
    2. Ensure your terminal supports 8 bit color. Most do, but if you need a recommendation I suggest [Alacritty](https://alacritty.org/)
