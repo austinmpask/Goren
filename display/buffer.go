@@ -36,7 +36,7 @@ func (v *View) DrawBuffer() {
 		for _, pxl := range row {
 			sb.WriteString(pxl)
 		}
-		// sb.WriteByte('\n')
+		sb.WriteByte('\n')
 	}
 	// sb.WriteString(v.Xborder)
 

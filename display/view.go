@@ -65,7 +65,7 @@ func CreateView(fps uint8, moveSpeed float64) *View {
 
 	v := View{
 		Xpx:          ws.Cols / 2,
-		Ypx:          ws.Rows,
+		Ypx:          ws.Rows - 1,
 		TargetFPS:    fps,
 		Fov:          90,
 		CamX:         0,

@@ -67,5 +67,7 @@ func main() {
 		scene.FrameSync("sleep", 0)
 
 	}
+	// Restore terminal settings after demo
+	input.RestoreTerminal()
 
 }

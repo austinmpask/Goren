@@ -90,7 +90,7 @@ func (v *View) DrawBigDebug(line uint16, text string, color string) {
 				pixelY := startY + uint16(row)
 
 				// Fill in pixel if appropriate
-				if bigChar[index] == 1 {
+				if bigChar[index] == 1 && pixelX < v.Xpx && pixelY < v.Ypx {
 					v.FrameBuffer[pixelY][pixelX] = utils.ColorMap[color][6]
 				}
 			}
