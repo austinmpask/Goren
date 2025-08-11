@@ -2,7 +2,7 @@
 	<img src="img/logo.png" width=300 alt="GOREN">
 </div>
 <p align="center">
-Zero dependency terminal based 3D rendering engine written in pure Go
+Zero dependency terminal based CPU 3D renderer written in pure Go
 </p>
 <div align="center">
 	<img src="img/DemoScene.gif" alt="Demo Scene">
@@ -10,26 +10,26 @@ Zero dependency terminal based 3D rendering engine written in pure Go
 
 # Features
 
-- Zero dependencies. No OpenGL or other APIs, just pure Go, from scratch
+- Zero dependencies. No OpenGL, Vulkan or other APIs, just pure Go, completely from scratch. 
 - Dynamic lighting from multiple light sources
 - 8-bit color
-- Planar depth interpolation
-- Frame-sync (similar to V-Sync)
-- .obj file imports with automatic triangulation
-- Support for 144+ FPS
+- Lightweight depth buffer via planar depth interpolation
+- Frame-syncing for smooth output (similar to V-Sync)
+- .obj file imports with automatic triangulation of larger faces
+- 144+ FPS potential dependant on scene complexity
 - Toggle wire frame, vertex, face and lighting draws
-- Optimized custom renderer for smooth terminal output
-- Free moving camera control
-- Freely scale, translate and rotate scene objects
-- Keyboard controls for camera translation and rotation
-- Advanced performance metrics in real time and with weighted averaging
+- From scratch rendering pipeline optimized for artifact free terminal output
+- Free moving perspective camera control (translation, pan, tilt)
+- Freely scale, translate and rotate scene objects (use this to implement simple animations)
+- Translation of terminal IO stream to realtime WASD keyboard input 
+- Real time performance metrics with weighted averaging
 
 # Getting Started
 
 ### Try the demo
 
 1. Compatibility: **Linux, Windows (via WSL only)**
-   - This is due to how keyboard inputs are read. Mac and Windows (outside of WSL) are unsupported at this time. I aim to implement a cross platform solution when I have time, but at the moment this whole thing is a proof of concept / technical demo.
+   - This is due to how keyboard inputs are read. Mac and Windows (outside of WSL) are unsupported at this time. There are no plans to expand platform support, this shall remain a tech demo.
 2. Adjust your terminal
    1. Zoom way out or change your terminal font size for the best experience. A pixel in Goren is 2 characters wide. You may encounter issues if you attempt to run Goren without adequate screen real estate.
    2. Ensure your terminal supports 8 bit color. Most do, but if you need a recommendation I suggest [Alacritty](https://alacritty.org/)
