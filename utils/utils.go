@@ -3,6 +3,11 @@ package utils
 import (
 	"fmt"
 	"math"
+	"os"
+	"os/exec"
+	"runtime"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -31,4 +36,45 @@ func CreateBuffers(x uint16, y uint16) ([][]string, [][]float64) {
 		db[i] = make([]float64, x)
 	}
 	return fb, db
+}
+
+// Cross platform terminal window determination
+func GetTerminalSize() (rows uint16, cols uint16) {
+	// Determine OS
+	switch runtime.GOOS {
+	// Do different window size methods on Windows
+	case "windows":
+		return winTerminalSize()
+	default:
+		return unixTerminalSize() // Mac/Linux
+	}
+}
+
+// Powershell cmd for windows terminal
+func winTerminalSize() (rows, cols uint16) {
+	cmd := exec.Command("powershell", "-command",
+		"&{$host.ui.rawui.WindowSize.Width}, {$host.ui.rawui.WindowSize.Height}")
+	out, _ := cmd.Output()
+
+	// Split into row and col
+	parts := strings.Split(strings.TrimSpace(string(out)), "\n")
+
+	r, _ := strconv.Atoi(strings.TrimSpace(parts[0]))
+	c, _ := strconv.Atoi(strings.TrimSpace(parts[1]))
+
+	return uint16(r), uint16(c)
+}
+
+// Do same thing but with stty for mac/linux
+func unixTerminalSize() (rows, cols uint16) {
+	cmd := exec.Command("stty", "size")
+	cmd.Stdin = os.Stdin
+	out, _ := cmd.Output()
+
+	split := strings.Split(strings.TrimSpace(string(out)), " ")
+
+	r, _ := strconv.Atoi(split[0])
+	c, _ := strconv.Atoi(split[1])
+
+	return uint16(r), uint16(c)
 }

@@ -5,9 +5,7 @@ import (
 	"go3d/actors"
 	"go3d/utils"
 	"strings"
-	"syscall"
 	"time"
-	"unsafe"
 )
 
 // View defines the screenspace printed to the terminal, with any debug
@@ -54,18 +52,11 @@ type View struct {
 // Create a view filling the whole terminal, and accept some custom options
 func CreateView(fps uint8, moveSpeed float64) *View {
 
-	// Get the terminal width and height
-	var ws struct {
-		Rows uint16
-		Cols uint16
-		X    uint16
-		Y    uint16
-	}
-	_, _, _ = syscall.Syscall(syscall.SYS_IOCTL, uintptr(0), uintptr(syscall.TIOCGWINSZ), uintptr(unsafe.Pointer(&ws)))
-
+	// Cross platform implementation to get window size
+	rows, cols := utils.GetTerminalSize()
 	v := View{
-		Xpx:          ws.Cols / 2,
-		Ypx:          ws.Rows - 1,
+		Xpx:          cols / 2,
+		Ypx:          rows - 1,
 		TargetFPS:    fps,
 		Fov:          90,
 		CamX:         0,
